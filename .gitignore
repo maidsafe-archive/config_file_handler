@@ -1,0 +1,15 @@
+*.exe
+*.lock
+*.swp
+*.rsproj
+tags*
+build/
+build-tests/
+target/
+*~
+/.idea
+tests/tmp*
+src/tmp*
+/.project
+*.sublime-*
+/bin/

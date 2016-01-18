@@ -1,0 +1,13 @@
+[package]
+authors = ["MaidSafe Developers <dev@maidsafe.net>"]
+description = "Create, read and write JSON-encoded config files."
+documentation = "http://maidsafe.net/config_file_handler/latest"
+homepage = "http://maidsafe.net"
+license = "GPL-3.0"
+name = "config_file_handler"
+readme = "README.md"
+repository = "https://github.com/maidsafe/config_file_handler"
+version = "0.0.1"
+
+[dependencies]
+rustc-serialize = "~0.3.16"
