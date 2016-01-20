@@ -37,4 +37,25 @@
 #![allow(box_pointers, fat_ptr_transmutes, missing_copy_implementations,
          missing_debug_implementations)]
 
+extern crate cbor;
+extern crate ip;
+extern crate memmap;
 extern crate rustc_serialize;
+
+#[cfg(test)]
+extern crate rand;
+
+/// Provides a struct and free functions for working with config files.
+pub mod file_handler;
+
+/// Provides a struct and free functions for accessing config files.
+pub mod config_handler;
+
+/// Representing endpoint of supported protocols.
+pub mod endpoint;
+
+/// Defines errors.
+pub mod error;
+
+/// Defines socket address.
+pub mod socket_addr;
