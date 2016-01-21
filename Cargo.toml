@@ -10,4 +10,6 @@ repository = "https://github.com/maidsafe/config_file_handler"
 version = "0.0.1"
 
 [dependencies]
+cbor = "~0.3.16"
+memmap = "~0.2.2"
 rustc-serialize = "~0.3.16"
