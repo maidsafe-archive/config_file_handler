@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["error","Defines errors."],["file_handler","Provides a struct and free functions for working with config files."]]});
