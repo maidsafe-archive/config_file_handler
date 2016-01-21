@@ -37,4 +37,15 @@
 #![allow(box_pointers, fat_ptr_transmutes, missing_copy_implementations,
          missing_debug_implementations)]
 
+extern crate cbor;
+extern crate memmap;
 extern crate rustc_serialize;
+
+/// Provides a struct and free functions for working with config files.
+pub mod file_handler;
+
+/// Defines errors.
+pub mod error;
+
+pub use file_handler::{FileHandler, current_bin_dir, user_app_dir,
+                       system_cache_dir, exe_file_stem, ScopedUserAppDirRemover};
