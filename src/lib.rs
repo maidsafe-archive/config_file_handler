@@ -46,5 +46,5 @@ mod error;
 mod file_handler;
 
 pub use error::Error;
-pub use file_handler::{FileHandler, current_bin_dir, user_app_dir,
-                       system_cache_dir, exe_file_stem, ScopedUserAppDirRemover};
+pub use file_handler::{FileHandler, ScopedUserAppDirRemover, current_bin_dir, user_app_dir,
+                       system_cache_dir, exe_file_stem};

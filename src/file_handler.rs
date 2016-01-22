@@ -116,9 +116,7 @@ impl FileHandler {
 
     /// Read the contents of the file and decode it as JSON.
     #[allow(unsafe_code)]
-    pub fn read_file<Contents: Decodable>
-        (&self)
-         -> Result<Contents, Error> {
+    pub fn read_file<Contents: Decodable>(&self) -> Result<Contents, Error> {
         let file = try!(File::open(&self.path));
         // TODO Replace with facilitites from fs2
         let file = try!(Mmap::open(&file, Protection::Read));
@@ -131,8 +129,7 @@ impl FileHandler {
 
     /// Write `contents` to the file as JSON.
     #[allow(unsafe_code)]
-    pub fn write_file<Contents: Encodable>(&self, contents: &Contents)
-                                                              -> Result<(), Error> {
+    pub fn write_file<Contents: Encodable>(&self, contents: &Contents) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
         let file = try!(OpenOptions::new().read(true).write(true).create(true).open(&self.path));
         try!(file.set_len(contents.len() as u64));
@@ -167,8 +164,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 #[cfg(any(target_os="macos", target_os="ios", target_os="linux"))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let home_dir = try!(env::home_dir().ok_or(io::Error::new(io::ErrorKind::NotFound,
-                                                                    "User home directory not \
-                                                                     found.")));
+                                                             "User home directory not found.")));
     Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
 }
 
@@ -253,7 +249,7 @@ mod test {
         let test_value = 123456789u64;
 
         let _ = file_handler.write_file::<u64>(&test_value);
-        let read_value =  match file_handler.read_file::<u64>() {
+        let read_value = match file_handler.read_file::<u64>() {
             Ok(result) => result,
             Err(err) => panic!("failed reading file with error {:?}", err),
         };
