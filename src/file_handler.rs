@@ -153,7 +153,7 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(target_os="windows")]
+#[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
 }
@@ -161,7 +161,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(any(target_os="macos", target_os="ios", target_os="linux"))]
+#[cfg(unix)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let home_dir = try!(env::home_dir().ok_or(io::Error::new(io::ErrorKind::NotFound,
                                                              "User home directory not found.")));
@@ -171,7 +171,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// The full path to a system cache directory available for all users.  See also [an example config
 /// file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(target_os="windows")]
+#[cfg(windows)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("ALLUSERSPROFILE"))))))
 }
@@ -179,7 +179,7 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 /// The full path to a system cache directory available for all users.  See also [an example config
 /// file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(any(target_os="macos", target_os="ios", target_os="linux"))]
+#[cfg(unix)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     join_exe_file_stem(Path::new("/var/cache"))
 }
