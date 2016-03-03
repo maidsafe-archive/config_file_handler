@@ -43,7 +43,6 @@
 #![cfg_attr(feature="clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature="clippy", allow(use_debug))]
 
-extern crate cbor;
 extern crate memmap;
 extern crate rustc_serialize;
 
