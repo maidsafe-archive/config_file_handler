@@ -1,5 +1,5 @@
 (function() {var implementors = {};
-implementors['libc'] = [];implementors['cbor'] = ["impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.DerefMut.html' title='core::ops::DerefMut'>DerefMut</a> for <a class='struct' href='cbor/struct.CborBytes.html' title='cbor::CborBytes'>CborBytes</a>",];
+implementors['libc'] = [];
 
             if (window.register_implementors) {
                 window.register_implementors(implementors);
