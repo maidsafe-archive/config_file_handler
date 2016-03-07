@@ -16,7 +16,6 @@
 // relating to use of the SAFE Network Software.
 
 use error::Error;
-use memmap::{Mmap, Protection};
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json, Decoder};
 use std::env;
@@ -24,6 +23,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::marker::PhantomData;
 
 /// Struct for reading and writing config files.
 ///
@@ -49,12 +49,14 @@ use std::path::{Path, PathBuf};
 /// mutually-exclusive to all other such binaries, and that each config file to be managed by
 /// `FileHandler` is placed in each binary's [`current_bin_dir()`](fn.current_bin_dir.html).  In
 /// this way, each process should be the only one accessing that file.
-pub struct FileHandler {
+pub struct FileHandler<T> {
     path: PathBuf,
+    _ph: PhantomData<T>,
 }
 
-impl FileHandler {
+impl<T> FileHandler<T> {
     /// Constructor taking the required file name (not the full path)
+    /// This function will return an error if the file does not exist.
     ///
     /// This function tests whether it has write access to the file in the following locations in
     /// this order (see also [an example config file flowchart]
@@ -66,78 +68,151 @@ impl FileHandler {
     ///
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
-    pub fn new<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler, Error> {
+    pub fn open<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
         let mut path = try!(current_bin_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
-            Ok(_) => return Ok(FileHandler { path: path }),
+        match OpenOptions::new().write(true).open(&path) {
+            Ok(_) => return Ok(FileHandler {
+                path: path,
+                _ph: PhantomData,
+            }),
             Err(_) => (),
         };
 
         let mut path = try!(user_app_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
-            Ok(_) => return Ok(FileHandler { path: path }),
+        match OpenOptions::new().write(true).open(&path) {
+            Ok(_) => return Ok(FileHandler {
+                path: path,
+                _ph: PhantomData,
+            }),
             Err(_) => (),
         };
 
         let mut path = try!(system_cache_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
-            Ok(_) => Ok(FileHandler { path: path }),
+        match OpenOptions::new().write(true).open(&path) {
+            Ok(_) => Ok(FileHandler {
+                path: path,
+                _ph: PhantomData,
+            }),
             Err(e) => Err(From::from(e)),
         }
-    }
-
-    /// Remove the file from every location where it can be read.
-    pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
-        let name = name.as_ref();
-        let i1 = current_bin_dir().into_iter();
-        let i2 = user_app_dir().into_iter();
-        let i3 = system_cache_dir().into_iter();
-
-        let dirs = i1.chain(i2.chain(i3));
-
-        for mut path in dirs {
-            path.push(name);
-            if path.exists() {
-                try!(fs::remove_file(path));
-            }
-        }
-
-        Ok(())
     }
 
     /// Get the full path to the file.
     pub fn path(&self) -> &Path {
         &self.path
     }
+}
 
+impl<T> FileHandler<T>
+        where T: Default + Encodable
+{
+    /// Constructor taking the required file name (not the full path)
+    /// The config file will be initialised to a default if it does not exist.
+    ///
+    /// This function tests whether it has write access to the file in the following locations in
+    /// this order (see also [an example config file flowchart]
+    /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf)):
+    ///
+    ///   1. [`current_bin_dir()`](fn.current_bin_dir.html)
+    ///   2. [`user_app_dir()`](fn.user_app_dir.html)
+    ///   3. [`system_cache_dir()`](fn.system_cache_dir.html)
+    ///
+    /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
+    /// process-safety.
+    pub fn new<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
+        match FileHandler::open(name) {
+            Ok(fh) => return Ok(fh),
+            Err(_) => (),
+        };
+
+        let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
+        let name = name.as_ref();
+        let mut path = try!(current_bin_dir());
+        path.push(name);
+        match OpenOptions::new().write(true).create(true).open(&path) {
+            Ok(mut f) => {
+                try!(f.write_all(&contents));
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            },
+            Err(_) => (),
+        };
+
+        let mut path = try!(user_app_dir());
+        path.push(name);
+        match OpenOptions::new().write(true).create(true).open(&path) {
+            Ok(mut f) => {
+                try!(f.write_all(&contents));
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            },
+            Err(_) => (),
+        };
+
+        let mut path = try!(system_cache_dir());
+        path.push(name);
+        match OpenOptions::new().write(true).create(true).open(&path) {
+            Ok(mut f) => {
+                try!(f.write_all(&contents));
+                Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                })
+            },
+            Err(e) => Err(From::from(e)),
+        }
+    }
+}
+
+impl<T> FileHandler<T>
+        where T: Decodable
+{
     /// Read the contents of the file and decode it as JSON.
-    #[allow(unsafe_code)]
-    pub fn read_file<Contents: Decodable>(&self) -> Result<Contents, Error> {
-        let file = try!(File::open(&self.path));
-        // TODO Replace with facilitites from fs2
-        let file = try!(Mmap::open(&file, Protection::Read));
-        let bytes: &[u8] = unsafe { file.as_slice() };
-        let mut cursor = io::Cursor::new(bytes);
-        let json = try!(Json::from_reader(&mut cursor));
-        let contents = try!(Contents::decode(&mut Decoder::new(json)));
+    pub fn read_file(&self) -> Result<T, Error> {
+        let mut file = try!(File::open(&self.path));
+        let json = try!(Json::from_reader(&mut file));
+        let contents = try!(T::decode(&mut Decoder::new(json)));
         Ok(contents)
     }
+}
 
+impl<T> FileHandler<T>
+        where T: Encodable
+{
     /// Write `contents` to the file as JSON.
-    #[allow(unsafe_code)]
-    pub fn write_file<Contents: Encodable>(&self, contents: &Contents) -> Result<(), Error> {
+    pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
-        let file = try!(OpenOptions::new().read(true).write(true).create(true).open(&self.path));
-        try!(file.set_len(contents.len() as u64));
-        let mut mmap = try!(Mmap::open(&file, Protection::ReadWrite));
-        // TODO Replace with facilitites from fs2
-        try!(unsafe { mmap.as_mut_slice() }.write_all(&contents[..]));
-        mmap.flush().map_err(Error::IoError)
+        let mut file = try!(OpenOptions::new().write(true).create(true).open(&self.path));
+        try!(file.write_all(&contents));
+        Ok(())
     }
+}
+
+/// Remove the file from every location where it can be read.
+pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
+    let name = name.as_ref();
+    let i1 = current_bin_dir().into_iter();
+    let i2 = user_app_dir().into_iter();
+    let i3 = system_cache_dir().into_iter();
+
+    let dirs = i1.chain(i2.chain(i3));
+
+    for mut path in dirs {
+        path.push(name);
+        if path.exists() {
+            try!(fs::remove_file(path));
+        }
+    }
+
+    Ok(())
 }
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
@@ -248,8 +323,8 @@ mod test {
         };
         let test_value = 123456789u64;
 
-        let _ = file_handler.write_file::<u64>(&test_value);
-        let read_value = match file_handler.read_file::<u64>() {
+        let _ = file_handler.write_file(&test_value);
+        let read_value = match file_handler.read_file() {
             Ok(result) => result,
             Err(err) => panic!("failed reading file with error {:?}", err),
         };
