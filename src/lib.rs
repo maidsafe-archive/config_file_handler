@@ -43,7 +43,6 @@
 #![cfg_attr(feature="clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature="clippy", allow(use_debug))]
 
-extern crate memmap;
 extern crate rustc_serialize;
 
 mod error;
@@ -51,4 +50,4 @@ mod file_handler;
 
 pub use error::Error;
 pub use file_handler::{FileHandler, ScopedUserAppDirRemover, current_bin_dir, user_app_dir,
-                       system_cache_dir, exe_file_stem};
+                       system_cache_dir, exe_file_stem, cleanup};
