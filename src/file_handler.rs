@@ -15,7 +15,7 @@
 // Please review the Licences for the specific language governing permissions and limitations
 // relating to use of the SAFE Network Software.
 
-use error::Error;
+use fs2::FileExt;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json, Decoder};
 use std::env;
@@ -24,6 +24,8 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
+
+use error::Error;
 
 /// Struct for reading and writing config files.
 ///
@@ -133,9 +135,9 @@ impl<T> FileHandler<T>
         let name = name.as_ref();
         let mut path = try!(current_bin_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
+        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
             Ok(mut f) => {
-                try!(f.write_all(&contents));
+                try!(write_with_lock(&mut f, &contents));
                 return Ok(FileHandler {
                     path: path,
                     _ph: PhantomData,
@@ -146,9 +148,9 @@ impl<T> FileHandler<T>
 
         let mut path = try!(user_app_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
+        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
             Ok(mut f) => {
-                try!(f.write_all(&contents));
+                try!(write_with_lock(&mut f, &contents));
                 return Ok(FileHandler {
                     path: path,
                     _ph: PhantomData,
@@ -159,9 +161,9 @@ impl<T> FileHandler<T>
 
         let mut path = try!(system_cache_dir());
         path.push(name);
-        match OpenOptions::new().write(true).create(true).open(&path) {
+        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
             Ok(mut f) => {
-                try!(f.write_all(&contents));
+                try!(write_with_lock(&mut f, &contents));
                 Ok(FileHandler {
                     path: path,
                     _ph: PhantomData,
@@ -178,7 +180,7 @@ impl<T> FileHandler<T>
     /// Read the contents of the file and decode it as JSON.
     pub fn read_file(&self) -> Result<T, Error> {
         let mut file = try!(File::open(&self.path));
-        let json = try!(Json::from_reader(&mut file));
+        let json = try!(shared_lock(&mut file, |file| Json::from_reader(file)));
         let contents = try!(T::decode(&mut Decoder::new(json)));
         Ok(contents)
     }
@@ -190,8 +192,8 @@ impl<T> FileHandler<T>
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
-        let mut file = try!(OpenOptions::new().write(true).create(true).open(&self.path));
-        try!(file.write_all(&contents));
+        let mut file = try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
+        try!(write_with_lock(&mut file, &contents));
         Ok(())
     }
 }
@@ -213,6 +215,26 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+fn exclusive_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
+    where F: FnOnce(&mut File) -> Result<R, E>, Error: From<E> {
+    try!(file.lock_exclusive());
+    let result = f(file);
+    try!(file.unlock());
+    result.map_err(From::from)
+}
+
+fn shared_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
+    where F: FnOnce(&mut File) -> Result<R, E>, Error: From<E> {
+    try!(file.lock_shared());
+    let result = f(file);
+    try!(file.unlock());
+    result.map_err(From::from)
+}
+
+fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
+    exclusive_lock(file, |file| file.write_all(contents))
 }
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
@@ -314,10 +336,12 @@ fn join_exe_file_stem(path: &Path) -> Result<PathBuf, Error> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     #[test]
     fn read_write_file_test() {
-        let _cleaner = super::ScopedUserAppDirRemover;
-        let file_handler = match super::FileHandler::new("file_handler_test.json") {
+        let _cleaner = ScopedUserAppDirRemover;
+        let file_handler = match FileHandler::new("test0.json") {
             Ok(result) => result,
             Err(err) => panic!("failed accessing file with error {:?}", err),
         };
@@ -329,5 +353,20 @@ mod test {
             Err(err) => panic!("failed reading file with error {:?}", err),
         };
         assert_eq!(test_value, read_value);
+    }
+
+    #[test]
+    fn existing_file_is_overwritten() {
+        let _cleaner = ScopedUserAppDirRemover;
+        let file_handler = FileHandler::new("test1.json").expect("failed accessing file");
+
+        let write_value0 = vec![1, 2, 3];
+        file_handler.write_file(&write_value0).expect("failed writing file");
+
+        let write_value1 = vec![4, 5, 6];
+        file_handler.write_file(&write_value1).expect("failed writing file");
+
+        let read_value = file_handler.read_file().expect("failed reading file");
+        assert_eq!(read_value, write_value1);
     }
 }
