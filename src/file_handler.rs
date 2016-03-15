@@ -336,10 +336,12 @@ fn join_exe_file_stem(path: &Path) -> Result<PathBuf, Error> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     #[test]
     fn read_write_file_test() {
-        let _cleaner = super::ScopedUserAppDirRemover;
-        let file_handler = match super::FileHandler::new("file_handler_test.json") {
+        let _cleaner = ScopedUserAppDirRemover;
+        let file_handler = match FileHandler::new("test0.json") {
             Ok(result) => result,
             Err(err) => panic!("failed accessing file with error {:?}", err),
         };
@@ -351,5 +353,20 @@ mod test {
             Err(err) => panic!("failed reading file with error {:?}", err),
         };
         assert_eq!(test_value, read_value);
+    }
+
+    #[test]
+    fn existing_file_is_overwritten() {
+        let _cleaner = ScopedUserAppDirRemover;
+        let file_handler = FileHandler::new("test1.json").expect("failed accessing file");
+
+        let write_value0 = vec![1, 2, 3];
+        file_handler.write_file(&write_value0).expect("failed writing file");
+
+        let write_value1 = vec![4, 5, 6];
+        file_handler.write_file(&write_value1).expect("failed writing file");
+
+        let read_value = file_handler.read_file().expect("failed reading file");
+        assert_eq!(read_value, write_value1);
     }
 }
