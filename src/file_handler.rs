@@ -31,26 +31,8 @@ use error::Error;
 ///
 /// # Thread- and Process-Safety
 ///
-/// Since all instances of `FileHandler` initialised with the same value for `name` within a single
-/// process will likely refer to the same file on disk, it is not safe to access any such instance
-/// concurrently with that same *or any other* such instance (with the exception of the
-/// [`path()`](#method.path) function which is the only non-mutating member function).
-///
-/// For instances initialised with different values for `name`, it is safe to access separate
-/// instances concurrently.
-///
-/// It is possibly unsafe to call [`write_file()`](#method.write_file) concurrently with a different
-/// process calling [`read_file()`](#method.read_file) or [`write_file()`](#method.write_file) where
-/// both processes have the same name and their instances of `FileHandler` are using the same name,
-/// since these may be accessing the same file on disk.  However, it is safe to call
-/// [`read_file()`](#method.read_file) concurrently across multiple such processes, since this
-/// function doesn't modify the file.
-///
-/// Perhaps the easiest way to make multi-process access safe is to ensure each process is a single
-/// execution of a binary, and that each binary is located in a directory which is
-/// mutually-exclusive to all other such binaries, and that each config file to be managed by
-/// `FileHandler` is placed in each binary's [`current_bin_dir()`](fn.current_bin_dir.html).  In
-/// this way, each process should be the only one accessing that file.
+/// It is safe to read and write the same file using `FileHandler`concurrently
+/// in multiple threads and/or processes.
 pub struct FileHandler<T> {
     path: PathBuf,
     _ph: PhantomData<T>,
@@ -368,5 +350,45 @@ mod test {
 
         let read_value = file_handler.read_file().expect("failed reading file");
         assert_eq!(read_value, write_value1);
+    }
+
+    #[test]
+    fn concurrent_writes() {
+        use std::iter;
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        const NUM_THREADS : usize = 100;
+        const DATA_SIZE : usize = 10000;
+        const FILE_NAME : &'static str = "test2.json";
+
+        let _cleaner = ScopedUserAppDirRemover;
+        let barrier = Arc::new(Barrier::new(NUM_THREADS));
+
+        let handles = (0..NUM_THREADS).map(|i| {
+            let barrier = barrier.clone();
+
+            thread::spawn(move || {
+                let data = iter::repeat(i).take(DATA_SIZE).collect::<Vec<_>>();
+
+                let _ = barrier.wait();
+
+                let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
+                file_handler.write_file(&data).expect("failed writing file");
+            })
+        }).collect::<Vec<_>>();
+
+        for handle in handles {
+            let _ = handle.join().unwrap();
+        }
+
+        let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
+        let mut data : Vec<usize> = file_handler.read_file().expect("failed reading file");
+
+        // Test that all elements in the vector are the same, to verify no
+        // interleaving took place.
+        data.sort();
+        data.dedup();
+        assert_eq!(data.len(), 1);
     }
 }
