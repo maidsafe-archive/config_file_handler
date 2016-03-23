@@ -1,5 +1,8 @@
 # Config File Handler - Change Log
 
+## [0.3.0]
+- Implemented std::fmt::Display and std::error::Error for Error.
+
 ## [0.2.1]
 - Fix: existing files are now overwritten, not appended to.
 - Added file locks to protect concurrent access.
