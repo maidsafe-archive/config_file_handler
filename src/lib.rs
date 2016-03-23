@@ -46,6 +46,10 @@
 extern crate fs2;
 extern crate rustc_serialize;
 
+#[allow(unused_extern_crates)] // Needed because the crate is only used for macros
+#[macro_use]
+extern crate quick_error;
+
 mod error;
 mod file_handler;
 
