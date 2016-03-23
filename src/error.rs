@@ -15,47 +15,45 @@
 // Please review the Licences for the specific language governing permissions and limitations
 // relating to use of the SAFE Network Software.
 
-/// Error types.
-#[derive(Debug)]
-pub enum Error {
-    /// Wrapper for a `::std::env::VarError`
-    EnvError(::std::env::VarError),
-    /// Wrapper for a `::std::io::Error`
-    IoError(::std::io::Error),
-    /// Wrapper for a `::rustc_serialize::json::DecoderError`
-    JsonDecoderError(::rustc_serialize::json::DecoderError),
-    /// Wrapper for a `::rustc_serialize::json::EncoderError`
-    JsonEncoderError(::rustc_serialize::json::EncoderError),
-    /// Wrapper for a `rustc_serialize::json::ParserError`
-    JsonParserError(::rustc_serialize::json::ParserError),
-}
-
-impl From<::std::env::VarError> for Error {
-    fn from(error: ::std::env::VarError) -> Self {
-        Error::EnvError(error)
+quick_error! {
+    /// Error types.
+    #[derive(Debug)]
+    pub enum Error {
+        /// Wrapper for a `::std::env::VarError`
+        EnvError(err: ::std::env::VarError) {
+            description("Environment error")
+            display("Environment error: {}", err)
+            cause(err)
+            from()
+        }
+        /// Wrapper for a `::std::io::Error`
+        IoError(err: ::std::io::Error) {
+            description("IO error")
+            display("IO error: {}", err)
+            cause(err)
+            from()
+        }
+        /// Wrapper for a `::rustc_serialize::json::DecoderError`
+        JsonDecoderError(err: ::rustc_serialize::json::DecoderError) {
+            description("Json decoder error")
+            display("Json decoder error: {}", err)
+            cause(err)
+            from()
+        }
+        /// Wrapper for a `::rustc_serialize::json::EncoderError`
+        JsonEncoderError(err: ::rustc_serialize::json::EncoderError) {
+            description("Json encoder error")
+            display("Json encoder error: {}", err)
+            cause(err)
+            from()
+        }
+        /// Wrapper for a `rustc_serialize::json::ParserError`
+        JsonParserError(err: ::rustc_serialize::json::ParserError) {
+            description("Json parse error")
+            display("Json parse error: {}", err)
+            cause(err)
+            from()
+        }
     }
 }
 
-impl From<::std::io::Error> for Error {
-    fn from(error: ::std::io::Error) -> Self {
-        Error::IoError(error)
-    }
-}
-
-impl From<::rustc_serialize::json::DecoderError> for Error {
-    fn from(error: ::rustc_serialize::json::DecoderError) -> Self {
-        Error::JsonDecoderError(error)
-    }
-}
-
-impl From<::rustc_serialize::json::EncoderError> for Error {
-    fn from(error: ::rustc_serialize::json::EncoderError) -> Self {
-        Error::JsonEncoderError(error)
-    }
-}
-
-impl From<::rustc_serialize::json::ParserError> for Error {
-    fn from(error: ::rustc_serialize::json::ParserError) -> Self {
-        Error::JsonParserError(error)
-    }
-}
