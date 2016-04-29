@@ -26,7 +26,7 @@
     
 
     <nav class="sidebar">
-        <a href='../config_file_handler/index.html'><img src='https://raw.githubusercontent.com/maidsafe/QA/master/Images/maidsafe_logo.png' alt='' width='100'></a>
+        <a href='../config_file_handler/index.html'><img src='https://raw.githubusercontent.com/maidsafe/QA/master/Images/maidsafe_logo.png' alt='logo' width='100'></a>
         <p class='location'><a href='index.html'>config_file_handler</a></p><script>window.sidebarCurrent = {name: 'ScopedUserAppDirRemover', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
     </nav>
 
@@ -46,14 +46,15 @@
             <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                 [<span class='inner'>&#x2212;</span>]
             </a>
-        </span><a id='src-249' class='srclink' href='../src/config_file_handler/file_handler.rs.html#293' title='goto source code'>[src]</a></span></h1>
+        </span><a id='src-249' class='srclink' href='../src/config_file_handler/src/file_handler.rs.html#293' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct ScopedUserAppDirRemover;</pre><div class='docblock'><p>RAII object which removes the <a href="fn.user_app_dir.html"><code>user_app_dir()</code></a> when an instance is
 dropped.</p>
 
 <p>Since the <code>user_app_dir</code> is frequently created by tests or examples which use Crust, this is a
 convenience object which tries to remove the directory when it is destroyed.</p>
 
-<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1><pre class='rust rust-example-rendered'>
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>config_file_handler</span>::{<span class='ident'>FileHandler</span>, <span class='ident'>ScopedUserAppDirRemover</span>};
 
 {
@@ -107,7 +108,7 @@ convenience object which tries to remove the directory when it is destroyed.</p>
 
                 <p>
                     Search functions by type signature (e.g.
-                    <code>vec -> usize</code>)
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
                 </p>
             </div>
         </div>
