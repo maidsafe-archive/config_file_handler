@@ -2,9 +2,8 @@
 
 [![](https://img.shields.io/badge/Project%20SAFE-Approved-green.svg)](http://maidsafe.net/applications) [![](https://img.shields.io/badge/License-GPL3-green.svg)](https://github.com/maidsafe/config_file_handler/blob/master/COPYING)
 
-**Primary Maintainer:** Qi Ma (qi.ma@maidsafe.net)
+**Maintainer:** Spandan Sharma (spandan.sharma@maidsafe.net)
 
-**Secondary Maintainer:** Fraser Hutchison (fraser.hutchison@maidsafe.net)
 
 |Crate|Linux/OS X|Windows|Coverage|Issues|
 |:---:|:--------:|:-----:|:------:|:----:|
