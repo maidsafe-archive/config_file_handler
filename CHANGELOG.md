@@ -1,5 +1,9 @@
 # Config File Handler - Change Log
 
+## [0.3.1]
+- Migrate quick-error to 1.1.0.
+- various docs update
+
 ## [0.3.0]
 - Implemented std::fmt::Display and std::error::Error for Error.
 
