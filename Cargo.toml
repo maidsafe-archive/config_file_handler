@@ -13,4 +13,4 @@ version = "0.3.0"
 clippy = {version = "~0.0.55", optional = true}
 fs2 = "~0.2.3"
 rustc-serialize = "~0.3.18"
-quick-error = "1.0.0"
+quick-error = "1.1.0"
