@@ -56,4 +56,3 @@ quick_error! {
         }
     }
 }
-
