@@ -20,35 +20,35 @@ quick_error! {
     #[derive(Debug)]
     pub enum Error {
         /// Wrapper for a `::std::env::VarError`
-        EnvError(err: ::std::env::VarError) {
+        Env(err: ::std::env::VarError) {
             description("Environment error")
             display("Environment error: {}", err)
             cause(err)
             from()
         }
         /// Wrapper for a `::std::io::Error`
-        IoError(err: ::std::io::Error) {
+        Io(err: ::std::io::Error) {
             description("IO error")
             display("IO error: {}", err)
             cause(err)
             from()
         }
         /// Wrapper for a `::rustc_serialize::json::DecoderError`
-        JsonDecoderError(err: ::rustc_serialize::json::DecoderError) {
+        JsonDecoder(err: ::rustc_serialize::json::DecoderError) {
             description("Json decoder error")
             display("Json decoder error: {}", err)
             cause(err)
             from()
         }
         /// Wrapper for a `::rustc_serialize::json::EncoderError`
-        JsonEncoderError(err: ::rustc_serialize::json::EncoderError) {
+        JsonEncoder(err: ::rustc_serialize::json::EncoderError) {
             description("Json encoder error")
             display("Json encoder error: {}", err)
             cause(err)
             from()
         }
         /// Wrapper for a `rustc_serialize::json::ParserError`
-        JsonParserError(err: ::rustc_serialize::json::ParserError) {
+        JsonParser(err: ::rustc_serialize::json::ParserError) {
             description("Json parse error")
             display("Json parse error: {}", err)
             cause(err)

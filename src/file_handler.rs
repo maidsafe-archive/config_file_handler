@@ -63,7 +63,7 @@ impl<T> FileHandler<T> {
                 });
             }
         }
-        Err(Error::IoError(io::Error::new(io::ErrorKind::NotFound, "config dir")))
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "config dir")))
     }
 
     /// Get the full path to the file.
@@ -97,20 +97,21 @@ impl<T> FileHandler<T>
         let name = name.as_ref();
         if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
             path.push(name);
-            match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-                Ok(mut f) => {
-                    try!(f.lock_exclusive());
-                    try!(f.write_all(&contents));
-                    try!(f.unlock());
-                    return Ok(FileHandler {
-                        path: path,
-                        _ph: PhantomData,
-                    });
-                }
-                Err(_) => (),
-            };
+            if let Ok(mut f) = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path) {
+                try!(f.lock_exclusive());
+                try!(f.write_all(&contents));
+                try!(f.unlock());
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            }
         }
-        Err(Error::IoError(io::Error::new(io::ErrorKind::NotFound, "config dir")))
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "config dir")))
     }
 }
 
@@ -174,7 +175,7 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
     match try!(env::current_exe()).parent() {
         Some(path) => Ok(path.to_path_buf()),
-        None => Err(Error::IoError(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
     }
 }
 
@@ -244,7 +245,7 @@ pub struct ScopedUserAppDirRemover;
 impl ScopedUserAppDirRemover {
     fn remove_dir(&mut self) {
         let _ = user_app_dir()
-            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::IoError));
+            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
     }
 }
 
