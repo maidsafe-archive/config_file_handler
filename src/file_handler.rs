@@ -89,51 +89,26 @@ impl<T> FileHandler<T>
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
     pub fn new<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
-        match FileHandler::open(name) {
-            Ok(fh) => return Ok(fh),
-            Err(_) => (),
-        };
+        if let Ok(fh) = FileHandler::open(name) {
+            return Ok(fh);
+        }
 
         let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
         let name = name.as_ref();
-        let mut path = try!(current_bin_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                });
-            }
-            Err(_) => (),
-        };
-
-        let mut path = try!(user_app_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                });
-            }
-            Err(_) => (),
-        };
-
-        let mut path = try!(system_cache_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                })
-            }
-            Err(e) => Err(From::from(e)),
+        if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
+            path.push(name);
+            match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
+                Ok(mut f) => {
+                    try!(write_with_lock(&mut f, &contents));
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    });
+                }
+                Err(_) => (),
+            };
         }
+        Err(Error::IoError(io::Error::new(io::ErrorKind::NotFound, "config dir")))
     }
 }
 
