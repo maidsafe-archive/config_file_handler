@@ -56,7 +56,7 @@ impl<T> FileHandler<T> {
         let name = name.as_ref();
         let mut path = try!(current_bin_dir());
         path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
+        match OpenOptions::new().create(false).write(true).open(&path) {
             Ok(_) => return Ok(FileHandler {
                 path: path,
                 _ph: PhantomData,
@@ -66,7 +66,7 @@ impl<T> FileHandler<T> {
 
         let mut path = try!(user_app_dir());
         path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
+        match OpenOptions::new().create(false).write(true).open(&path) {
             Ok(_) => return Ok(FileHandler {
                 path: path,
                 _ph: PhantomData,
@@ -76,7 +76,7 @@ impl<T> FileHandler<T> {
 
         let mut path = try!(system_cache_dir());
         path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
+        match OpenOptions::new().create(false).write(true).open(&path) {
             Ok(_) => Ok(FileHandler {
                 path: path,
                 _ph: PhantomData,
@@ -175,7 +175,10 @@ impl<T> FileHandler<T>
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
         let mut file = try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
+
+
         try!(write_with_lock(&mut file, &contents));
+
         Ok(())
     }
 }
@@ -223,10 +226,10 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
-    let mut path = try!(env::current_exe());
-    let pop_result = path.pop();
-    debug_assert!(pop_result);
-    Ok(path)
+    match try!(env::current_exe()).parent() {
+        Some(path) => Ok(path.to_path_buf()),
+        None => Err(Error::IoError(io::Error::new(io::ErrorKind::NotFound, "Current bin dir")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
