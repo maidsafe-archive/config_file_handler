@@ -20,8 +20,8 @@ use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json, Decoder};
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
 
@@ -99,7 +99,9 @@ impl<T> FileHandler<T>
             path.push(name);
             match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
                 Ok(mut f) => {
-                    try!(write_with_lock(&mut f, &contents));
+                    try!(f.lock_exclusive());
+                    try!(f.write_all(&contents));
+                    try!(f.unlock());
                     return Ok(FileHandler {
                         path: path,
                         _ph: PhantomData,
@@ -117,10 +119,14 @@ impl<T> FileHandler<T>
 {
     /// Read the contents of the file and decode it as JSON.
     pub fn read_file(&self) -> Result<T, Error> {
-        let mut file = try!(File::open(&self.path));
-        let json = try!(shared_lock(&mut file, |file| Json::from_reader(file)));
-        let contents = try!(T::decode(&mut Decoder::new(json)));
-        Ok(contents)
+        let mut file = try!(OpenOptions::new().create(false).read(true).open(&self.path));
+
+        try!(file.lock_shared());
+        let mut data = String::new();
+        let _ = try!(file.read_to_string(&mut data));
+        try!(file.unlock());
+        let json = try!(Json::from_str(&data));
+        Ok(try!(T::decode(&mut Decoder::new(json))))
     }
 }
 
@@ -133,8 +139,10 @@ impl<T> FileHandler<T>
         let mut file =
             try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
 
+        try!(file.lock_exclusive());
+        try!(file.write_all(&contents));
+        try!(file.unlock());
 
-        try!(write_with_lock(&mut file, &contents));
 
         Ok(())
     }
@@ -159,29 +167,6 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
     Ok(())
 }
 
-fn exclusive_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>,
-          Error: From<E>
-{
-    try!(file.lock_exclusive());
-    let result = f(file);
-    try!(file.unlock());
-    result.map_err(From::from)
-}
-
-fn shared_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>,
-          Error: From<E>
-{
-    try!(file.lock_shared());
-    let result = f(file);
-    try!(file.unlock());
-    result.map_err(From::from)
-}
-
-fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
-    exclusive_lock(file, |file| file.write_all(contents))
-}
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
