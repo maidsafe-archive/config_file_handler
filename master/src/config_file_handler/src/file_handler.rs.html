@@ -387,6 +387,11 @@
 <span id="343">343</span>
 <span id="344">344</span>
 <span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
 </pre><pre class='rust '>
 <span class='comment'>// Copyright 2016 MaidSafe.net limited.</span>
 <span class='comment'>//</span>
@@ -411,7 +416,7 @@
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>env</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ffi</span>::{<span class='ident'>OsStr</span>, <span class='ident'>OsString</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fs</span>::{<span class='self'>self</span>, <span class='ident'>OpenOptions</span>};
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::{<span class='self'>self</span>, <span class='ident'>Write</span>, <span class='ident'>Read</span>};
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::{<span class='self'>self</span>, <span class='ident'>Write</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>path</span>::{<span class='ident'>Path</span>, <span class='ident'>PathBuf</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>marker</span>::<span class='ident'>PhantomData</span>;
 
@@ -444,7 +449,9 @@
     <span class='doccomment'>/// process-safety.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>open</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>AsRef</span><span class='op'>&lt;</span><span class='ident'>OsStr</span><span class='op'>&gt;</span> <span class='op'>+</span> ?<span class='ident'>Sized</span><span class='op'>&gt;</span>(<span class='ident'>name</span>: <span class='kw-2'>&amp;</span><span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>FileHandler</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span>, <span class='ident'>Error</span><span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='ident'>name</span> <span class='op'>=</span> <span class='ident'>name</span>.<span class='ident'>as_ref</span>();
-        <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>path</span>) <span class='op'>=</span> <span class='ident'>current_bin_dir</span>().<span class='ident'>or</span>(<span class='ident'>user_app_dir</span>()).<span class='ident'>or</span>(<span class='ident'>system_cache_dir</span>()) {
+        <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>path</span>) <span class='op'>=</span> <span class='ident'>current_bin_dir</span>()
+            .<span class='ident'>or_else</span>(<span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>user_app_dir</span>())
+            .<span class='ident'>or_else</span>(<span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>system_cache_dir</span>()) {
             <span class='ident'>path</span>.<span class='ident'>push</span>(<span class='ident'>name</span>);
             <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(_) <span class='op'>=</span> <span class='ident'>OpenOptions</span>::<span class='ident'>new</span>().<span class='ident'>create</span>(<span class='boolval'>false</span>).<span class='ident'>write</span>(<span class='boolval'>true</span>).<span class='ident'>open</span>(<span class='kw-2'>&amp;</span><span class='ident'>path</span>) {
                 <span class='kw'>return</span> <span class='prelude-val'>Ok</span>(<span class='ident'>FileHandler</span> {
@@ -485,7 +492,9 @@
 
         <span class='kw'>let</span> <span class='ident'>contents</span> <span class='op'>=</span> <span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>json</span>::<span class='ident'>as_pretty_json</span>(<span class='kw-2'>&amp;</span><span class='ident'>T</span>::<span class='ident'>default</span>())).<span class='ident'>into_bytes</span>();
         <span class='kw'>let</span> <span class='ident'>name</span> <span class='op'>=</span> <span class='ident'>name</span>.<span class='ident'>as_ref</span>();
-        <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>path</span>) <span class='op'>=</span> <span class='ident'>current_bin_dir</span>().<span class='ident'>or</span>(<span class='ident'>user_app_dir</span>()).<span class='ident'>or</span>(<span class='ident'>system_cache_dir</span>()) {
+        <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>path</span>) <span class='op'>=</span> <span class='ident'>current_bin_dir</span>()
+            .<span class='ident'>or_else</span>(<span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>user_app_dir</span>())
+            .<span class='ident'>or_else</span>(<span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>system_cache_dir</span>()) {
             <span class='ident'>path</span>.<span class='ident'>push</span>(<span class='ident'>name</span>);
             <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Ok</span>(<span class='kw-2'>mut</span> <span class='ident'>f</span>) <span class='op'>=</span> <span class='ident'>OpenOptions</span>::<span class='ident'>new</span>()
                 .<span class='ident'>write</span>(<span class='boolval'>true</span>)
@@ -493,8 +502,9 @@
                 .<span class='ident'>truncate</span>(<span class='boolval'>true</span>)
                 .<span class='ident'>open</span>(<span class='kw-2'>&amp;</span><span class='ident'>path</span>) {
                 <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>f</span>.<span class='ident'>lock_exclusive</span>());
-                <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>f</span>.<span class='ident'>write_all</span>(<span class='kw-2'>&amp;</span><span class='ident'>contents</span>));
+                <span class='kw'>let</span> <span class='ident'>write_result</span> <span class='op'>=</span> <span class='ident'>f</span>.<span class='ident'>write_all</span>(<span class='kw-2'>&amp;</span><span class='ident'>contents</span>);
                 <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>f</span>.<span class='ident'>unlock</span>());
+                <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>write_result</span>);
                 <span class='kw'>return</span> <span class='prelude-val'>Ok</span>(<span class='ident'>FileHandler</span> {
                     <span class='ident'>path</span>: <span class='ident'>path</span>,
                     <span class='ident'>_ph</span>: <span class='ident'>PhantomData</span>,
@@ -513,11 +523,9 @@
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>file</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>OpenOptions</span>::<span class='ident'>new</span>().<span class='ident'>create</span>(<span class='boolval'>false</span>).<span class='ident'>read</span>(<span class='boolval'>true</span>).<span class='ident'>open</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>path</span>));
 
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>lock_shared</span>());
-        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>data</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>new</span>();
-        <span class='kw'>let</span> _ <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>read_to_string</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>data</span>));
+        <span class='kw'>let</span> <span class='ident'>json_result</span> <span class='op'>=</span> <span class='ident'>Json</span>::<span class='ident'>from_reader</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>file</span>);
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>unlock</span>());
-        <span class='kw'>let</span> <span class='ident'>json</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>Json</span>::<span class='ident'>from_str</span>(<span class='kw-2'>&amp;</span><span class='ident'>data</span>));
-        <span class='prelude-val'>Ok</span>(<span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>T</span>::<span class='ident'>decode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>Decoder</span>::<span class='ident'>new</span>(<span class='ident'>json</span>))))
+        <span class='prelude-val'>Ok</span>(<span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>T</span>::<span class='ident'>decode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>Decoder</span>::<span class='ident'>new</span>(<span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>json_result</span>)))))
     }
 }
 
@@ -531,9 +539,9 @@
             <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>OpenOptions</span>::<span class='ident'>new</span>().<span class='ident'>write</span>(<span class='boolval'>true</span>).<span class='ident'>create</span>(<span class='boolval'>true</span>).<span class='ident'>truncate</span>(<span class='boolval'>true</span>).<span class='ident'>open</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>path</span>));
 
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>lock_exclusive</span>());
-        <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>write_all</span>(<span class='kw-2'>&amp;</span><span class='ident'>contents</span>));
+        <span class='kw'>let</span> <span class='ident'>write_result</span> <span class='op'>=</span> <span class='ident'>file</span>.<span class='ident'>write_all</span>(<span class='kw-2'>&amp;</span><span class='ident'>contents</span>);
         <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file</span>.<span class='ident'>unlock</span>());
-
+        <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>write_result</span>);
 
         <span class='prelude-val'>Ok</span>(())
     }
@@ -611,40 +619,6 @@
     <span class='prelude-val'>Ok</span>(<span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>file_stem</span>.<span class='ident'>ok_or</span>(<span class='ident'>not_found_error</span>(<span class='kw-2'>&amp;</span><span class='ident'>exe_path</span>))).<span class='ident'>to_os_string</span>())
 }
 
-<span class='doccomment'>/// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is</span>
-<span class='doccomment'>/// dropped.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Since the `user_app_dir` is frequently created by tests or examples which use Crust, this is a</span>
-<span class='doccomment'>/// convenience object which tries to remove the directory when it is destroyed.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # Examples</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>/// use config_file_handler::{FileHandler, ScopedUserAppDirRemover};</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// {</span>
-<span class='doccomment'>///     let _cleaner = ScopedUserAppDirRemover;</span>
-<span class='doccomment'>///     let file_handler = FileHandler::new(&quot;test.json&quot;).unwrap();</span>
-<span class='doccomment'>///     // User app dir is possibly created by this call.</span>
-<span class='doccomment'>///     let _ = file_handler.write_file(&amp;111u64);</span>
-<span class='doccomment'>/// }</span>
-<span class='doccomment'>/// // User app dir is now removed since &#39;_cleaner&#39; has gone out of scope.</span>
-<span class='doccomment'>/// ```</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ScopedUserAppDirRemover</span>;
-
-<span class='kw'>impl</span> <span class='ident'>ScopedUserAppDirRemover</span> {
-    <span class='kw'>fn</span> <span class='ident'>remove_dir</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {
-        <span class='kw'>let</span> _ <span class='op'>=</span> <span class='ident'>user_app_dir</span>()
-            .<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>user_app_dir</span><span class='op'>|</span> <span class='ident'>fs</span>::<span class='ident'>remove_dir_all</span>(<span class='ident'>user_app_dir</span>).<span class='ident'>map_err</span>(<span class='ident'>Error</span>::<span class='ident'>Io</span>));
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>Drop</span> <span class='kw'>for</span> <span class='ident'>ScopedUserAppDirRemover</span> {
-    <span class='kw'>fn</span> <span class='ident'>drop</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {
-        <span class='self'>self</span>.<span class='ident'>remove_dir</span>();
-    }
-}
-
 <span class='kw'>fn</span> <span class='ident'>not_found_error</span>(<span class='ident'>file_name</span>: <span class='kw-2'>&amp;</span><span class='ident'>Path</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span> {
     <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>msg</span>: <span class='ident'>String</span> <span class='op'>=</span> <span class='ident'>From</span>::<span class='ident'>from</span>(<span class='string'>&quot;No file name component: &quot;</span>);
     <span class='ident'>msg</span>.<span class='ident'>push_str</span>(<span class='kw-2'>&amp;</span><span class='ident'>file_name</span>.<span class='ident'>to_string_lossy</span>());
@@ -658,6 +632,42 @@
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
 <span class='kw'>mod</span> <span class='ident'>test</span> {
     <span class='kw'>use</span> <span class='ident'>super</span>::<span class='op'>*</span>;
+    <span class='kw'>use</span> <span class='ident'>error</span>::<span class='ident'>Error</span>;
+    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fs</span>;
+
+    <span class='doccomment'>/// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is</span>
+    <span class='doccomment'>/// dropped.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// Since the `user_app_dir` is frequently created by tests or examples which use Crust, this is a</span>
+    <span class='doccomment'>/// convenience object which tries to remove the directory when it is destroyed.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// # Examples</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// ```</span>
+    <span class='doccomment'>/// use config_file_handler::{FileHandler, ScopedUserAppDirRemover};</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// {</span>
+    <span class='doccomment'>///     let _cleaner = ScopedUserAppDirRemover;</span>
+    <span class='doccomment'>///     let file_handler = FileHandler::new(&quot;test.json&quot;).unwrap();</span>
+    <span class='doccomment'>///     // User app dir is possibly created by this call.</span>
+    <span class='doccomment'>///     let _ = file_handler.write_file(&amp;111u64);</span>
+    <span class='doccomment'>/// }</span>
+    <span class='doccomment'>/// // User app dir is now removed since &#39;_cleaner&#39; has gone out of scope.</span>
+    <span class='doccomment'>/// ```</span>
+    <span class='kw'>struct</span> <span class='ident'>ScopedUserAppDirRemover</span>;
+
+    <span class='kw'>impl</span> <span class='ident'>ScopedUserAppDirRemover</span> {
+        <span class='kw'>fn</span> <span class='ident'>remove_dir</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {
+            <span class='kw'>let</span> _ <span class='op'>=</span> <span class='ident'>user_app_dir</span>()
+                .<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>user_app_dir</span><span class='op'>|</span> <span class='ident'>fs</span>::<span class='ident'>remove_dir_all</span>(<span class='ident'>user_app_dir</span>).<span class='ident'>map_err</span>(<span class='ident'>Error</span>::<span class='ident'>Io</span>));
+        }
+    }
+
+    <span class='kw'>impl</span> <span class='ident'>Drop</span> <span class='kw'>for</span> <span class='ident'>ScopedUserAppDirRemover</span> {
+        <span class='kw'>fn</span> <span class='ident'>drop</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {
+            <span class='self'>self</span>.<span class='ident'>remove_dir</span>();
+        }
+    }
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
     <span class='kw'>fn</span> <span class='ident'>read_write_file_test</span>() {
@@ -720,7 +730,7 @@
             .<span class='ident'>collect</span>::<span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span>_<span class='op'>&gt;&gt;</span>();
 
         <span class='kw'>for</span> <span class='ident'>handle</span> <span class='kw'>in</span> <span class='ident'>handles</span> {
-            <span class='kw'>let</span> _ <span class='op'>=</span> <span class='ident'>handle</span>.<span class='ident'>join</span>().<span class='ident'>unwrap</span>();
+            <span class='ident'>handle</span>.<span class='ident'>join</span>().<span class='ident'>unwrap</span>();
         }
 
         <span class='kw'>let</span> <span class='ident'>file_handler</span> <span class='op'>=</span> <span class='ident'>FileHandler</span>::<span class='ident'>new</span>(<span class='ident'>FILE_NAME</span>).<span class='ident'>expect</span>(<span class='string'>&quot;failed accessing file&quot;</span>);
