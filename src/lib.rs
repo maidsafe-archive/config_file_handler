@@ -40,7 +40,7 @@
 
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", deny(clippy, clippy))]
+#![cfg_attr(feature="clippy", deny(clippy))]
 #![cfg_attr(feature="clippy", allow(use_debug))]
 
 extern crate fs2;
@@ -55,5 +55,5 @@ mod error;
 mod file_handler;
 
 pub use error::Error;
-pub use file_handler::{FileHandler, ScopedUserAppDirRemover, current_bin_dir, user_app_dir,
-                       system_cache_dir, exe_file_stem, cleanup};
+pub use file_handler::{FileHandler, current_bin_dir, user_app_dir, system_cache_dir,
+                       exe_file_stem, cleanup};
