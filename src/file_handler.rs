@@ -20,8 +20,8 @@ use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json::{self, Json, Decoder};
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
 
@@ -54,35 +54,16 @@ impl<T> FileHandler<T> {
     /// process-safety.
     pub fn open<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
-        let mut path = try!(current_bin_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
-            Ok(_) => return Ok(FileHandler {
-                path: path,
-                _ph: PhantomData,
-            }),
-            Err(_) => (),
-        };
-
-        let mut path = try!(user_app_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
-            Ok(_) => return Ok(FileHandler {
-                path: path,
-                _ph: PhantomData,
-            }),
-            Err(_) => (),
-        };
-
-        let mut path = try!(system_cache_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).open(&path) {
-            Ok(_) => Ok(FileHandler {
-                path: path,
-                _ph: PhantomData,
-            }),
-            Err(e) => Err(From::from(e)),
+        if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
+            path.push(name);
+            if let Ok(_) = OpenOptions::new().create(false).write(true).open(&path) {
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            }
         }
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "config dir")))
     }
 
     /// Get the full path to the file.
@@ -92,7 +73,7 @@ impl<T> FileHandler<T> {
 }
 
 impl<T> FileHandler<T>
-        where T: Default + Encodable
+    where T: Default + Encodable
 {
     /// Constructor taking the required file name (not the full path)
     /// The config file will be initialised to a default if it does not exist.
@@ -108,74 +89,62 @@ impl<T> FileHandler<T>
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
     pub fn new<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
-        match FileHandler::open(name) {
-            Ok(fh) => return Ok(fh),
-            Err(_) => (),
-        };
+        if let Ok(fh) = FileHandler::open(name) {
+            return Ok(fh);
+        }
 
         let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
         let name = name.as_ref();
-        let mut path = try!(current_bin_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
+        if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
+            path.push(name);
+            if let Ok(mut f) = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path) {
+                try!(f.lock_exclusive());
+                try!(f.write_all(&contents));
+                try!(f.unlock());
                 return Ok(FileHandler {
                     path: path,
                     _ph: PhantomData,
                 });
-            },
-            Err(_) => (),
-        };
-
-        let mut path = try!(user_app_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                });
-            },
-            Err(_) => (),
-        };
-
-        let mut path = try!(system_cache_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                })
-            },
-            Err(e) => Err(From::from(e)),
+            }
         }
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "config dir")))
     }
 }
 
 impl<T> FileHandler<T>
-        where T: Decodable
+    where T: Decodable
 {
     /// Read the contents of the file and decode it as JSON.
     pub fn read_file(&self) -> Result<T, Error> {
-        let mut file = try!(File::open(&self.path));
-        let json = try!(shared_lock(&mut file, |file| Json::from_reader(file)));
-        let contents = try!(T::decode(&mut Decoder::new(json)));
-        Ok(contents)
+        let mut file = try!(OpenOptions::new().create(false).read(true).open(&self.path));
+
+        try!(file.lock_shared());
+        let mut data = String::new();
+        let _ = try!(file.read_to_string(&mut data));
+        try!(file.unlock());
+        let json = try!(Json::from_str(&data));
+        Ok(try!(T::decode(&mut Decoder::new(json))))
     }
 }
 
 impl<T> FileHandler<T>
-        where T: Encodable
+    where T: Encodable
 {
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
-        let mut file = try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
-        try!(write_with_lock(&mut file, &contents));
+        let mut file =
+            try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
+
+        try!(file.lock_exclusive());
+        try!(file.write_all(&contents));
+        try!(file.unlock());
+
+
         Ok(())
     }
 }
@@ -199,34 +168,15 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
     Ok(())
 }
 
-fn exclusive_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>, Error: From<E> {
-    try!(file.lock_exclusive());
-    let result = f(file);
-    try!(file.unlock());
-    result.map_err(From::from)
-}
-
-fn shared_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>, Error: From<E> {
-    try!(file.lock_shared());
-    let result = f(file);
-    try!(file.unlock());
-    result.map_err(From::from)
-}
-
-fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
-    exclusive_lock(file, |file| file.write_all(contents))
-}
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
-    let mut path = try!(env::current_exe());
-    let pop_result = path.pop();
-    debug_assert!(pop_result);
-    Ok(path)
+    match try!(env::current_exe()).parent() {
+        Some(path) => Ok(path.to_path_buf()),
+        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -242,8 +192,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(unix)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let home_dir = try!(env::home_dir().ok_or(io::Error::new(io::ErrorKind::NotFound,
-                                                             "User home directory not found.")));
+    let home_dir = try!(env::home_dir()
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
     Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
 }
 
@@ -294,9 +244,8 @@ pub struct ScopedUserAppDirRemover;
 
 impl ScopedUserAppDirRemover {
     fn remove_dir(&mut self) {
-        let _ = user_app_dir().and_then(|user_app_dir| {
-            fs::remove_dir_all(user_app_dir).map_err(Error::IoError)
-        });
+        let _ = user_app_dir()
+            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
     }
 }
 
@@ -358,32 +307,34 @@ mod test {
         use std::sync::{Arc, Barrier};
         use std::thread;
 
-        const NUM_THREADS : usize = 100;
-        const DATA_SIZE : usize = 10000;
-        const FILE_NAME : &'static str = "test2.json";
+        const NUM_THREADS: usize = 100;
+        const DATA_SIZE: usize = 10000;
+        const FILE_NAME: &'static str = "test2.json";
 
         let _cleaner = ScopedUserAppDirRemover;
         let barrier = Arc::new(Barrier::new(NUM_THREADS));
 
-        let handles = (0..NUM_THREADS).map(|i| {
-            let barrier = barrier.clone();
+        let handles = (0..NUM_THREADS)
+            .map(|i| {
+                let barrier = barrier.clone();
 
-            thread::spawn(move || {
-                let data = iter::repeat(i).take(DATA_SIZE).collect::<Vec<_>>();
+                thread::spawn(move || {
+                    let data = iter::repeat(i).take(DATA_SIZE).collect::<Vec<_>>();
 
-                let _ = barrier.wait();
+                    let _ = barrier.wait();
 
-                let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
-                file_handler.write_file(&data).expect("failed writing file");
+                    let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
+                    file_handler.write_file(&data).expect("failed writing file");
+                })
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         for handle in handles {
             let _ = handle.join().unwrap();
         }
 
         let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
-        let mut data : Vec<usize> = file_handler.read_file().expect("failed reading file");
+        let mut data: Vec<usize> = file_handler.read_file().expect("failed reading file");
 
         // Test that all elements in the vector are the same, to verify no
         // interleaving took place.
