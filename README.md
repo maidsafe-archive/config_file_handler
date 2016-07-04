@@ -13,6 +13,8 @@
 
 Create, read and write JSON-encoded config files.
 
+![Flow chart](https://github.com/maidsafe/config_file_handler/blob/master/img/flowchart.png)
+
 ## License
 
 Licensed under either of
