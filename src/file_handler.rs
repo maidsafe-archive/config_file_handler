@@ -109,7 +109,9 @@ impl<T> FileHandler<T>
                 .create(true)
                 .truncate(true)
                 .open(&path) {
+                try!(f.lock_exclusive());
                 let write_result = f.write_all(&contents);
+                try!(f.unlock());
                 try!(write_result);
                 return Ok(FileHandler {
                     path: path,
