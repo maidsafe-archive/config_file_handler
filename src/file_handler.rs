@@ -24,6 +24,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex, Once, ONCE_INIT};
 
 use error::Error;
 
@@ -171,14 +172,52 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
     Ok(())
 }
 
+struct GlobalMutex(Arc<Mutex<()>>);
+
+#[allow(unsafe_code)]
+fn global_mutex() -> Arc<Mutex<()>> {
+    static mut GLOBAL_MUTEX: *const GlobalMutex = 0 as *const GlobalMutex;
+    static ONCE: Once = ONCE_INIT;
+    unsafe {
+        ONCE.call_once(|| {
+            let mutex = GlobalMutex(Arc::new(Mutex::new(())));
+            GLOBAL_MUTEX = Box::into_raw(Box::new(mutex));
+        });
+
+        (*GLOBAL_MUTEX).0.clone()
+    }
+}
+
+fn test_file_creation(mut path: PathBuf) -> bool {
+    path.set_file_name("sample.txt");
+    let mutex = global_mutex();
+    let _guard = mutex.lock().unwrap();
+    match OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&path) {
+        Ok(_) => fs::remove_file(path).is_ok(),
+        Err(e) => {
+            println!("Error: {:?}", e);
+            false
+        }
+    }
+}
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
-    match try!(env::current_exe()).parent() {
-        Some(path) => Ok(path.to_path_buf()),
-        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    let path = match try!(env::current_exe()).parent() {
+        Some(path) => path.to_path_buf(),
+        None => return Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    };
+
+    if test_file_creation(path.clone()) {
+        Ok(path)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
     }
 }
 
@@ -205,7 +244,12 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
+    let home_dir = try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA")))));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -216,7 +260,12 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut home_dir = try!(env::home_dir()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
     home_dir.push("Library/Application Support");
-    Ok(try!(join_exe_file_stem(&home_dir)))
+    home_dir = try!(join_exe_file_stem(&home_dir));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -227,7 +276,12 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut home_dir = try!(env::home_dir()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
     home_dir.push(".config");
-    Ok(try!(join_exe_file_stem(&home_dir)))
+    home_dir = try!(join_exe_file_stem(&home_dir));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
 }
 
 /// The full path to a system cache directory available for all users.  See also [an example config
