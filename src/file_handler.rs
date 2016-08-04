@@ -193,7 +193,7 @@ fn global_mutex() -> Arc<Mutex<()>> {
 }
 
 fn test_file_creation(mut path: PathBuf) -> bool {
-    path.set_file_name("sample.txt");
+    path.set_file_name("sample_0123498765.txt");
     let mutex = global_mutex();
     let _guard = mutex.lock().unwrap();
     match OpenOptions::new()
