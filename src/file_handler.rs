@@ -141,6 +141,8 @@ impl<T> FileHandler<T>
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
+        let mutex = global_mutex();
+        let _guard = mutex.lock().unwrap();
         let mut file =
             try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
 
