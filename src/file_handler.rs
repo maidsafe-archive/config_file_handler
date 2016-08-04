@@ -102,14 +102,14 @@ impl<T> FileHandler<T>
             .or_else(|_| user_app_dir())
             .or_else(|_| system_cache_dir()) {
             path.push(name);
+            let mutex = global_mutex();
+            let _guard = mutex.lock().unwrap();
             if let Ok(mut f) = OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
                 .open(&path) {
-                try!(f.lock_exclusive());
                 let write_result = f.write_all(&contents);
-                try!(f.unlock());
                 try!(write_result);
                 return Ok(FileHandler {
                     path: path,
