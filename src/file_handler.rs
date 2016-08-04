@@ -182,6 +182,24 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
     }
 }
 
+// /// The full path to an application support directory for the current user.  See also [an example
+// /// config file flowchart]
+// /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+// #[cfg(windows)]
+// pub fn user_app_dir() -> Result<PathBuf, Error> {
+//     Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
+// }
+//
+// /// The full path to an application support directory for the current user.  See also [an example
+// /// config file flowchart]
+// /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+// #[cfg(unix)]
+// pub fn user_app_dir() -> Result<PathBuf, Error> {
+//     let home_dir = try!(env::home_dir()
+//         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+//     Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
+// }
+
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
@@ -193,11 +211,23 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(unix)]
+#[cfg(target_os="macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let home_dir = try!(env::home_dir()
+    let mut home_dir = try!(env::home_dir()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
-    Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
+    home_dir.push("Library/Application Support");
+    Ok(try!(join_exe_file_stem(&home_dir)))
+}
+
+/// The full path to an application support directory for the current user.  See also [an example
+/// config file flowchart]
+/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(all(unix, not(target_os="macos")))]
+pub fn user_app_dir() -> Result<PathBuf, Error> {
+    let mut home_dir = try!(env::home_dir()
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+    home_dir.push(".config");
+    Ok(try!(join_exe_file_stem(&home_dir)))
 }
 
 /// The full path to a system cache directory available for all users.  See also [an example config
@@ -346,5 +376,15 @@ mod test {
         data.sort();
         data.dedup();
         assert_eq!(data.len(), 1);
+    }
+
+    // To be run as `cargo test -- --ignored --nocapture` to find out path in current OS
+    #[test]
+    #[ignore]
+    fn print_path() {
+        println!("1st Preference: File pathe in current binary directory: {:?}",
+                 current_bin_dir().unwrap());
+        println!("2nd Preference: File path in user app directory: {:?}",
+                 user_app_dir().unwrap());
     }
 }
