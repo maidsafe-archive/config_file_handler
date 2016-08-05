@@ -326,7 +326,7 @@ pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
-pub fn user_app_dir(create_if_missing: bool) -> Result<PathBuf, Error> {
+pub fn user_app_dir() -> Result<PathBuf, Error> {
     let app_dir = Path::new(&try!(env::var("APPDATA")));
 
     if app_dir.is_dir() {
