@@ -21,7 +21,7 @@ use rustc_serialize::json::{self, Json, Decoder};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
 
@@ -54,9 +54,7 @@ impl<T> FileHandler<T> {
     /// process-safety.
     pub fn open<S: AsRef<OsStr> + ?Sized>(name: &S) -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
-        if let Ok(mut path) = current_bin_dir()
-            .or_else(|_| user_app_dir())
-            .or_else(|_| system_cache_dir()) {
+        if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
             path.push(name);
             if let Ok(_) = OpenOptions::new().create(false).write(true).open(&path) {
                 return Ok(FileHandler {
@@ -97,9 +95,7 @@ impl<T> FileHandler<T>
 
         let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
         let name = name.as_ref();
-        if let Ok(mut path) = current_bin_dir()
-            .or_else(|_| user_app_dir())
-            .or_else(|_| system_cache_dir()) {
+        if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
             path.push(name);
             if let Ok(mut f) = OpenOptions::new()
                 .write(true)
@@ -107,9 +103,8 @@ impl<T> FileHandler<T>
                 .truncate(true)
                 .open(&path) {
                 try!(f.lock_exclusive());
-                let write_result = f.write_all(&contents);
+                try!(f.write_all(&contents));
                 try!(f.unlock());
-                try!(write_result);
                 return Ok(FileHandler {
                     path: path,
                     _ph: PhantomData,
@@ -128,9 +123,11 @@ impl<T> FileHandler<T>
         let mut file = try!(OpenOptions::new().create(false).read(true).open(&self.path));
 
         try!(file.lock_shared());
-        let json_result = Json::from_reader(&mut file);
+        let mut data = String::new();
+        let _ = try!(file.read_to_string(&mut data));
         try!(file.unlock());
-        Ok(try!(T::decode(&mut Decoder::new(try!(json_result)))))
+        let json = try!(Json::from_str(&data));
+        Ok(try!(T::decode(&mut Decoder::new(json))))
     }
 }
 
@@ -144,9 +141,9 @@ impl<T> FileHandler<T>
             try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
 
         try!(file.lock_exclusive());
-        let write_result = file.write_all(&contents);
+        try!(file.write_all(&contents));
         try!(file.unlock());
-        try!(write_result);
+
 
         Ok(())
     }
@@ -224,6 +221,40 @@ pub fn exe_file_stem() -> Result<OsString, Error> {
     Ok(try!(file_stem.ok_or(not_found_error(&exe_path))).to_os_string())
 }
 
+/// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is
+/// dropped.
+///
+/// Since the `user_app_dir` is frequently created by tests or examples which use Crust, this is a
+/// convenience object which tries to remove the directory when it is destroyed.
+///
+/// # Examples
+///
+/// ```
+/// use config_file_handler::{FileHandler, ScopedUserAppDirRemover};
+///
+/// {
+///     let _cleaner = ScopedUserAppDirRemover;
+///     let file_handler = FileHandler::new("test.json").unwrap();
+///     // User app dir is possibly created by this call.
+///     let _ = file_handler.write_file(&111u64);
+/// }
+/// // User app dir is now removed since '_cleaner' has gone out of scope.
+/// ```
+pub struct ScopedUserAppDirRemover;
+
+impl ScopedUserAppDirRemover {
+    fn remove_dir(&mut self) {
+        let _ = user_app_dir()
+            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
+    }
+}
+
+impl Drop for ScopedUserAppDirRemover {
+    fn drop(&mut self) {
+        self.remove_dir();
+    }
+}
+
 fn not_found_error(file_name: &Path) -> io::Error {
     let mut msg: String = From::from("No file name component: ");
     msg.push_str(&file_name.to_string_lossy());
@@ -237,42 +268,6 @@ fn join_exe_file_stem(path: &Path) -> Result<PathBuf, Error> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use error::Error;
-    use std::fs;
-
-    /// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is
-    /// dropped.
-    ///
-    /// Since the `user_app_dir` is frequently created by tests or examples which use Crust, this is a
-    /// convenience object which tries to remove the directory when it is destroyed.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use config_file_handler::{FileHandler, ScopedUserAppDirRemover};
-    ///
-    /// {
-    ///     let _cleaner = ScopedUserAppDirRemover;
-    ///     let file_handler = FileHandler::new("test.json").unwrap();
-    ///     // User app dir is possibly created by this call.
-    ///     let _ = file_handler.write_file(&111u64);
-    /// }
-    /// // User app dir is now removed since '_cleaner' has gone out of scope.
-    /// ```
-    struct ScopedUserAppDirRemover;
-
-    impl ScopedUserAppDirRemover {
-        fn remove_dir(&mut self) {
-            let _ = user_app_dir()
-                .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
-        }
-    }
-
-    impl Drop for ScopedUserAppDirRemover {
-        fn drop(&mut self) {
-            self.remove_dir();
-        }
-    }
 
     #[test]
     fn read_write_file_test() {
@@ -335,7 +330,7 @@ mod test {
             .collect::<Vec<_>>();
 
         for handle in handles {
-            handle.join().unwrap();
+            let _ = handle.join().unwrap();
         }
 
         let file_handler = FileHandler::new(FILE_NAME).expect("failed accessing file");
