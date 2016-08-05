@@ -10,10 +10,7 @@ repository = "https://github.com/maidsafe/config_file_handler"
 version = "0.3.1"
 
 [dependencies]
+clippy = {version = "~0.0.55", optional = true}
 fs2 = "~0.2.3"
-quick-error = "~1.1.0"
 rustc-serialize = "~0.3.18"
-
-[dependencies.clippy]
-optional = true
-version = "~0.0.55"
+quick-error = "1.1.0"
