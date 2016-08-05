@@ -568,6 +568,11 @@ mod test {
             Err(x) => format!("{:?}", x),
         };
 
+        let current_bin_resource_dir = match current_bin_resource_dir() {
+            Ok(x) => format!("{:?}", x),
+            Err(x) => format!("{:?}", x),
+        };
+
         let user_app_dir = match user_app_dir() {
             Ok(x) => format!("{:?}", x),
             Err(x) => format!("{:?}", x),
@@ -580,6 +585,9 @@ mod test {
 
         println!("=================================");
         println!("Current bin dir in {}: {}", os, current_bin_dir);
+        println!("Current bin resource in {}: {}",
+                 os,
+                 current_bin_resource_dir);
         println!("Current use-app-dir in {}: {}", os, user_app_dir);
         println!("Current system-cache-dir in {}: {}", os, system_cache_dir);
         println!("=================================");
