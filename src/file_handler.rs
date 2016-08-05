@@ -60,29 +60,44 @@ impl<T> FileHandler<T> {
                                           -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
 
-        let mut path = try!(current_bin_dir());
-        path.push(name);
-        match OpenOptions::new().read(true).write(assert_writable).open(&path) {
-            Ok(_) => {
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                })
+        if let Ok(mut path) = current_bin_dir() {
+            path.push(name);
+            match OpenOptions::new().read(true).write(assert_writable).open(&path) {
+                Ok(_) => {
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    })
+                }
+                Err(_) => (),
             }
-            Err(_) => (),
-        };
+        }
 
-        let mut path = try!(user_app_dir());
-        path.push(name);
-        match OpenOptions::new().read(true).write(assert_writable).open(&path) {
-            Ok(_) => {
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                })
+        if let Ok(mut path) = current_bin_resource_dir() {
+            path.push(name);
+            match OpenOptions::new().read(true).write(assert_writable).open(&path) {
+                Ok(_) => {
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    })
+                }
+                Err(_) => (),
             }
-            Err(_) => (),
-        };
+        }
+
+        if let Ok(mut path) = user_app_dir() {
+            path.push(name);
+            match OpenOptions::new().read(true).write(assert_writable).open(&path) {
+                Ok(_) => {
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    })
+                }
+                Err(_) => (),
+            }
+        }
 
         let mut path = try!(system_cache_dir());
         path.push(name);
@@ -136,33 +151,58 @@ impl<T> FileHandler<T>
 
         let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
 
-        let mut path = try!(current_bin_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                });
+        if let Ok(mut path) = current_bin_dir() {
+            path.push(name);
+            match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
+                Ok(mut f) => {
+                    try!(write_with_lock(&mut f, &contents));
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    });
+                }
+                Err(_) => (),
             }
-            Err(_) => (),
-        };
+        }
 
-        path = try!(user_app_dir());
-        path.push(name);
-        match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-            Ok(mut f) => {
-                try!(write_with_lock(&mut f, &contents));
-                return Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                });
+        if let Ok(mut path) = current_bin_resource_dir() {
+            path.push(name);
+            match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
+                Ok(mut f) => {
+                    try!(write_with_lock(&mut f, &contents));
+                    return Ok(FileHandler {
+                        path: path,
+                        _ph: PhantomData,
+                    });
+                }
+                Err(_) => (),
             }
-            Err(_) => (),
-        };
+        }
 
-        path = try!(system_cache_dir());
+        if let Ok(mut path) = user_app_dir() {
+            let mut avoid = false;
+            if !path.is_dir() {
+                avoid = fs::create_dir(&path).is_err();
+            }
+            if !avoid {
+                path.push(name);
+                match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
+                    Ok(mut f) => {
+                        try!(write_with_lock(&mut f, &contents));
+                        return Ok(FileHandler {
+                            path: path,
+                            _ph: PhantomData,
+                        });
+                    }
+                    Err(_) => (),
+                }
+            }
+        }
+
+        let mut path = try!(system_cache_dir());
+        if !path.is_dir() {
+            try!(fs::create_dir(&path));
+        }
         path.push(name);
         match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
             Ok(mut f) => {
@@ -251,7 +291,6 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(not(target_os="macos"))]
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
     match try!(env::current_exe()).parent() {
         Some(path) => Ok(path.to_path_buf()),
@@ -259,18 +298,23 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
     }
 }
 
-/// The full path to the directory containing the currently-running binary.
-/// For OSX this is special directory as the bin directory cannot have files created. Also
-/// non-binary content may not be added to the bin folder while packaging.
-///
-/// See also: [an example config file
-/// flowchart] (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// The full path to the directory containing the resources to currently-running binary.
+/// For OSX this is special directory. For others it's an error.
+#[cfg(not(target_os="macos"))]
+pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
+    Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                 "Binary resource directory only applicable to MacOs")))
+}
+
+/// The full path to the directory containing the resources to currently-running binary.
+/// For OSX this is special directory. For others it's an error.
 #[cfg(target_os="macos")]
-pub fn current_bin_dir() -> Result<PathBuf, Error> {
+pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
     let mut bin_dir = try!(env::current_exe());
     for _ in 0..2 {
         bin_dir = try!(bin_dir.parent()
-                .ok_or(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))))
+                .ok_or(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                                "Binary resources directory"))))
             .to_path_buf();
     }
     bin_dir.push("Resources");
@@ -282,8 +326,15 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
-pub fn user_app_dir() -> Result<PathBuf, Error> {
-    Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
+pub fn user_app_dir(create_if_missing: bool) -> Result<PathBuf, Error> {
+    let app_dir = Path::new(&try!(env::var("APPDATA")));
+
+    if app_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&app_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global user app directory not found.")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -292,10 +343,15 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 #[cfg(all(unix, not(target_os="macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut home_dir = try!(env::home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")));
     home_dir.push(".config");
 
-    Ok(try!(join_exe_file_stem(&home_dir)))
+    if home_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&home_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global user app directory not found.")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -303,27 +359,61 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(target_os="macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut home_dir = try!(env::home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
-    home_dir.push("Library/Application Support");
+    let mut app_dir = try!(env::home_dir()
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")));
+    app_dir.push("Library/Application Support");
 
-    Ok(try!(join_exe_file_stem(&home_dir)))
+    if app_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&app_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global user app directory not found.")))
+    }
 }
 
-/// The full path to a system cache directory available for all users.  See also [an example config
+/// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
-    Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("ALLUSERSPROFILE"))))))
+    let sys_cache_dir = Path::new(&try!(env::var("ALLUSERSPROFILE")));
+
+    if sys_cache_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&sys_cache_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global system cache directory not found.")))
+    }
 }
 
-/// The full path to a system cache directory available for all users.  See also [an example config
+/// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os="macos")))]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
-    join_exe_file_stem(Path::new("/var/cache"))
+    let sys_cache_dir = Path::new("/var/cache");
+
+    if sys_cache_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&sys_cache_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global system cache directory not found.")))
+    }
+}
+
+/// The full path to a system cache directory available for all users. See also [an example config
+/// file flowchart]
+/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(target_os="macos")]
+pub fn system_cache_dir() -> Result<PathBuf, Error> {
+    let sys_cache_dir = Path::new("/Library/Application Support");
+
+    if sys_cache_dir.is_dir() {
+        Ok(try!(join_exe_file_stem(&sys_cache_dir)))
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                     "Global system cache directory not found.")))
+    }
 }
 
 /// The file name of the currently-running binary without any suffix or extension.  For example, if
