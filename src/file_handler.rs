@@ -245,11 +245,31 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(not(target_os="macos"))]
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
-    let mut path = try!(env::current_exe());
-    let pop_result = path.pop();
-    debug_assert!(pop_result);
-    Ok(path)
+    match try!(env::current_exe()).parent() {
+        Some(path) => Ok(path.to_path_buf()),
+        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    }
+}
+
+/// The full path to the directory containing the currently-running binary.
+/// For OSX this is special directory as the bin directory cannot have files created. Also
+/// non-binary content may not be added to the bin folder while packaging.
+///
+/// See also: [an example config file
+/// flowchart] (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(target_os="macos")]
+pub fn current_bin_dir() -> Result<PathBuf, Error> {
+    let mut bin_dir = try!(env::current_exe());
+    for _ in 0..2 {
+        bin_dir = try!(bin_dir.parent()
+                .ok_or(Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir")))))
+            .to_path_buf();
+    }
+    bin_dir.push("Resources");
+
+    Ok(bin_dir)
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -263,11 +283,25 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os="macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let home_dir = try!(env::home_dir()
+    let mut home_dir = try!(env::home_dir()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
-    Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
+    home_dir.push(".config");
+
+    Ok(try!(join_exe_file_stem(&home_dir)))
+}
+
+/// The full path to an application support directory for the current user.  See also [an example
+/// config file flowchart]
+/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(target_os="macos")]
+pub fn user_app_dir() -> Result<PathBuf, Error> {
+    let mut home_dir = try!(env::home_dir()
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+    home_dir.push("Library/Application Support");
+
+    Ok(try!(join_exe_file_stem(&home_dir)))
 }
 
 /// The full path to a system cache directory available for all users.  See also [an example config
@@ -318,7 +352,7 @@ pub struct ScopedUserAppDirRemover;
 impl ScopedUserAppDirRemover {
     fn remove_dir(&mut self) {
         let _ = user_app_dir()
-            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::IoError));
+            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
     }
 }
 
@@ -415,5 +449,43 @@ mod test {
         data.sort();
         data.dedup();
         assert_eq!(data.len(), 1);
+    }
+
+    // Run as `cargo test -- --ignored --nocapture` to print the paths
+    #[test]
+    #[ignore]
+    fn print_paths() {
+        let os = if cfg!(target_os = "macos") {
+            "Mac".to_string()
+        } else if cfg!(target_os = "linux") {
+            "Linux".to_string()
+        } else if cfg!(unix) {
+            "Unix (family)".to_string()
+        } else if cfg!(windows) {
+            "Windows".to_string()
+        } else {
+            "Unknown".to_string()
+        };
+
+        let current_bin_dir = match current_bin_dir() {
+            Ok(x) => format!("{:?}", x),
+            Err(x) => format!("{:?}", x),
+        };
+
+        let user_app_dir = match user_app_dir() {
+            Ok(x) => format!("{:?}", x),
+            Err(x) => format!("{:?}", x),
+        };
+
+        let system_cache_dir = match system_cache_dir() {
+            Ok(x) => format!("{:?}", x),
+            Err(x) => format!("{:?}", x),
+        };
+
+        println!("=================================");
+        println!("Current bin dir in {}: {}", os, current_bin_dir);
+        println!("Current use-app-dir in {}: {}", os, user_app_dir);
+        println!("Current system-cache-dir in {}: {}", os, system_cache_dir);
+        println!("=================================");
     }
 }
