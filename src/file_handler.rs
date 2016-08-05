@@ -24,6 +24,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex, Once, ONCE_INIT};
 
 use error::Error;
 
@@ -97,6 +98,8 @@ impl<T> FileHandler<T>
         let name = name.as_ref();
         if let Ok(mut path) = current_bin_dir().or(user_app_dir()).or(system_cache_dir()) {
             path.push(name);
+            let mutex = global_mutex();
+            let _guard = mutex.lock().unwrap();
             if let Ok(mut f) = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -137,6 +140,8 @@ impl<T> FileHandler<T>
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
+        let mutex = global_mutex();
+        let _guard = mutex.lock().unwrap();
         let mut file =
             try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
 
@@ -168,33 +173,116 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
     Ok(())
 }
 
+struct GlobalMutex(Arc<Mutex<()>>);
+
+#[allow(unsafe_code)]
+fn global_mutex() -> Arc<Mutex<()>> {
+    static mut GLOBAL_MUTEX: *const GlobalMutex = 0 as *const GlobalMutex;
+    static ONCE: Once = ONCE_INIT;
+    unsafe {
+        ONCE.call_once(|| {
+            let mutex = GlobalMutex(Arc::new(Mutex::new(())));
+            GLOBAL_MUTEX = Box::into_raw(Box::new(mutex));
+        });
+
+        (*GLOBAL_MUTEX).0.clone()
+    }
+}
+
+fn test_file_creation(mut path: PathBuf) -> bool {
+    path.set_file_name("sample_0123498765.txt");
+    let mutex = global_mutex();
+    let _guard = mutex.lock().unwrap();
+    match OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&path) {
+        Ok(_) => fs::remove_file(path).is_ok(),
+        Err(e) => {
+            println!("Error: {:?}", e);
+            false
+        }
+    }
+}
 
 /// The full path to the directory containing the currently-running binary.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
-    match try!(env::current_exe()).parent() {
-        Some(path) => Ok(path.to_path_buf()),
-        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    let path = match try!(env::current_exe()).parent() {
+        Some(path) => path.to_path_buf(),
+        None => return Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+    };
+
+    if test_file_creation(path.clone()) {
+        Ok(path)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
     }
 }
+
+// /// The full path to an application support directory for the current user.  See also [an example
+// /// config file flowchart]
+// /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+// #[cfg(windows)]
+// pub fn user_app_dir() -> Result<PathBuf, Error> {
+//     Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
+// }
+//
+// /// The full path to an application support directory for the current user.  See also [an example
+// /// config file flowchart]
+// /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+// #[cfg(unix)]
+// pub fn user_app_dir() -> Result<PathBuf, Error> {
+//     let home_dir = try!(env::home_dir()
+//         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+//     Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
+// }
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    Ok(try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA"))))))
+    let home_dir = try!(join_exe_file_stem(Path::new(&try!(env::var("APPDATA")))));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(unix)]
+#[cfg(target_os="macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let home_dir = try!(env::home_dir()
+    let mut home_dir = try!(env::home_dir()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
-    Ok(try!(join_exe_file_stem(&home_dir)).join(".config"))
+    home_dir.push("Library/Application Support");
+    home_dir = try!(join_exe_file_stem(&home_dir));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
+}
+
+/// The full path to an application support directory for the current user.  See also [an example
+/// config file flowchart]
+/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+#[cfg(all(unix, not(target_os="macos")))]
+pub fn user_app_dir() -> Result<PathBuf, Error> {
+    let mut home_dir = try!(env::home_dir()
+        .ok_or(io::Error::new(io::ErrorKind::NotFound, "User home directory not found.")));
+    home_dir.push(".config");
+    home_dir = try!(join_exe_file_stem(&home_dir));
+    if test_file_creation(home_dir.clone()) {
+        Ok(home_dir)
+    } else {
+        Err(Error::Io(io::Error::new(io::ErrorKind::Other, "Permission denied")))
+    }
 }
 
 /// The full path to a system cache directory available for all users.  See also [an example config
@@ -341,5 +429,15 @@ mod test {
         data.sort();
         data.dedup();
         assert_eq!(data.len(), 1);
+    }
+
+    // To be run as `cargo test -- --ignored --nocapture` to find out path in current OS
+    #[test]
+    #[ignore]
+    fn print_path() {
+        println!("1st Preference: File pathe in current binary directory: {:?}",
+                 current_bin_dir().unwrap());
+        println!("2nd Preference: File path in user app directory: {:?}",
+                 user_app_dir().unwrap());
     }
 }
