@@ -26,6 +26,7 @@ use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
 
 use error::Error;
+use global_mutex;
 
 /// Struct for reading and writing config files.
 ///
@@ -133,6 +134,8 @@ impl<T> FileHandler<T>
         let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
         let name = name.as_ref();
 
+        let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
+
         let mut path = try!(current_bin_dir());
         path.push(name);
         match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
@@ -192,6 +195,9 @@ impl<T> FileHandler<T>
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
+
+        let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
+
         let mut file =
             try!(OpenOptions::new().write(true).create(true).truncate(true).open(&self.path));
         try!(write_with_lock(&mut file, &contents));
@@ -264,7 +270,7 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
     let mut bin_dir = try!(env::current_exe());
     for _ in 0..2 {
         bin_dir = try!(bin_dir.parent()
-                .ok_or(Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir")))))
+                .ok_or(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))))
             .to_path_buf();
     }
     bin_dir.push("Resources");
