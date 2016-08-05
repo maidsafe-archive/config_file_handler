@@ -73,7 +73,7 @@ impl<T> FileHandler<T> {
             }
         }
 
-        if let Ok(mut path) = current_bin_resource_dir() {
+        if let Ok(mut path) = bundle_resource_dir() {
             path.push(name);
             match OpenOptions::new().read(true).write(assert_writable).open(&path) {
                 Ok(_) => {
@@ -165,7 +165,7 @@ impl<T> FileHandler<T>
             }
         }
 
-        if let Ok(mut path) = current_bin_resource_dir() {
+        if let Ok(mut path) = bundle_resource_dir() {
             path.push(name);
             match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
                 Ok(mut f) => {
@@ -301,25 +301,33 @@ pub fn current_bin_dir() -> Result<PathBuf, Error> {
 /// The full path to the directory containing the resources to currently-running binary.
 /// For OSX this is special directory. For others it's an error.
 #[cfg(not(target_os="macos"))]
-pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
+pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
     Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                 "Binary resource directory only applicable to MacOs")))
+                                 "Bundle resource directory only applicable to MacOs")))
 }
 
 /// The full path to the directory containing the resources to currently-running binary.
 /// For OSX this is special directory. For others it's an error.
 #[cfg(target_os="macos")]
-pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
-    let mut bin_dir = try!(env::current_exe());
-    for _ in 0..2 {
-        bin_dir = try!(bin_dir.parent()
-                .ok_or(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                                "Binary resources directory"))))
-            .to_path_buf();
-    }
-    bin_dir.push("Resources");
+pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
+    let mut bundle_dir = try!(try!(env::current_exe())
+            .parent()
+            .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory")))
+        .to_path_buf();
 
-    Ok(bin_dir)
+    if !try!(bundle_dir.to_str()
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Path is not unicode")))
+        .ends_with(".app/Contents/MacOS") {
+        return Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
+                                            "Not inside an Application Bundle")));
+    }
+
+    bundle_dir = try!(bundle_dir.parent()
+            .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory")))
+        .to_path_buf();
+    bundle_dir.push("Resources");
+
+    Ok(bundle_dir)
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
@@ -570,7 +578,7 @@ mod test {
             Err(x) => format!("{:?}", x),
         };
 
-        let current_bin_resource_dir = match current_bin_resource_dir() {
+        let bundle_resource_dir = match bundle_resource_dir() {
             Ok(x) => format!("{:?}", x),
             Err(x) => format!("{:?}", x),
         };
@@ -587,9 +595,7 @@ mod test {
 
         println!("=================================");
         println!("Current bin dir in {}: {}", os, current_bin_dir);
-        println!("Current bin resource in {}: {}",
-                 os,
-                 current_bin_resource_dir);
+        println!("Current bin resource in {}: {}", os, bundle_resource_dir);
         println!("Current use-app-dir in {}: {}", os, user_app_dir);
         println!("Current system-cache-dir in {}: {}", os, system_cache_dir);
         println!("=================================");
