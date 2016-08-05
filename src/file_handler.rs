@@ -327,7 +327,8 @@ pub fn current_bin_resource_dir() -> Result<PathBuf, Error> {
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let app_dir = Path::new(&try!(env::var("APPDATA")));
+    let path = try!(env::var("APPDATA"));
+    let app_dir = Path::new(&path);
 
     if app_dir.is_dir() {
         Ok(try!(join_exe_file_stem(&app_dir)))
@@ -376,7 +377,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
 #[cfg(windows)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
-    let sys_cache_dir = Path::new(&try!(env::var("ALLUSERSPROFILE")));
+    let path = try!(env::var("ALLUSERSPROFILE"));
+    let sys_cache_dir = Path::new(&path);
 
     if sys_cache_dir.is_dir() {
         Ok(try!(join_exe_file_stem(&sys_cache_dir)))
