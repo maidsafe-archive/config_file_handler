@@ -165,20 +165,6 @@ impl<T> FileHandler<T>
             }
         }
 
-        if let Ok(mut path) = bundle_resource_dir() {
-            path.push(name);
-            match OpenOptions::new().write(true).create(true).truncate(true).open(&path) {
-                Ok(mut f) => {
-                    try!(write_with_lock(&mut f, &contents));
-                    return Ok(FileHandler {
-                        path: path,
-                        _ph: PhantomData,
-                    });
-                }
-                Err(_) => (),
-            }
-        }
-
         if let Ok(mut path) = user_app_dir() {
             let mut avoid = false;
             if !path.is_dir() {
