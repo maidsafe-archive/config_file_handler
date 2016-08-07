@@ -27,7 +27,7 @@ quick_error! {
             from()
         }
         /// Wrapper for a `::std::io::Error`
-        IoError(err: ::std::io::Error) {
+        Io(err: ::std::io::Error) {
             description("IO error")
             display("IO error: {}", err)
             cause(err)
@@ -56,4 +56,3 @@ quick_error! {
         }
     }
 }
-

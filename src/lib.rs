@@ -52,6 +52,7 @@ extern crate quick_error;
 
 mod error;
 mod file_handler;
+mod global_mutex;
 
 pub use error::Error;
 pub use file_handler::{FileHandler, ScopedUserAppDirRemover, current_bin_dir, user_app_dir,
