@@ -5,8 +5,8 @@
 // licence you accepted on initial access to the Software (the "Licences").
 //
 // By contributing code to the SAFE Network Software, or to this project generally, you agree to be
-// bound by the terms of the MaidSafe Contributor Agreement, version 1.0.  This, along with the
-// Licenses can be found in the root directory of this project at LICENSE, COPYING and CONTRIBUTOR.
+// bound by the terms of the MaidSafe Contributor Agreement.  This, along with the Licenses can be
+// found in the root directory of this project at LICENSE, COPYING and CONTRIBUTOR.
 //
 // Unless required by applicable law or agreed to in writing, the SAFE Network Software distributed
 // under the GPL Licence is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,7 +19,7 @@
 // creation/deletion can only be protected by a global mutex if multiple threads are going for such
 // operations.
 
-use std::sync::{Mutex, Once, ONCE_INIT};
+use std::sync::{Mutex, ONCE_INIT, Once};
 
 pub type GlobalMutex = Mutex<()>;
 
@@ -29,9 +29,7 @@ pub fn get_mutex<'a>() -> &'a GlobalMutex {
     static ONCE: Once = ONCE_INIT;
 
     unsafe {
-        ONCE.call_once(|| {
-            GLOBAL_MUTEX = Box::into_raw(Box::new(GlobalMutex::new(())));
-        });
+        ONCE.call_once(|| { GLOBAL_MUTEX = Box::into_raw(Box::new(GlobalMutex::new(()))); });
 
         &*GLOBAL_MUTEX
     }

@@ -1,25 +1,43 @@
 env:
   global:
-    secure: S10vA8uJJ0HMwK6fJ8dINCHF4b7+DjdJZemwihS0Sgivi7h790mfC8K7ghtuJ2L62HIdWrlFKq6rmCyIZn5TGDJOq+ZqZM4z8Ky4Z6QGlcJyJjVEcaGnb8HWJ4hRWusa2epHBI/q5H10EF4mBWibpSDg1vLGbP64NwNz1VonW3nj67eCadogeanz4gTPNZ7LV+adBGkEaxxfpyNCS1aSTjeSy9VnZ+K85hpHKcOCy/es77ZjsXA1xuleLsrkWcjQwWebgxS1uZ69q7kID9QfVwQ4XQ+63jUzbLXnkll9fAtOT4PSoeWM5JU2/Ksr8fyDo5Oi+1rMC86+EDsQCVUsFjsquFAs4HEqyYMH3C2aZ7ZA55Jshf42WjX8GJV9HTB5S+ogW7C/mFN/x+QCWPwztElGULOZYs7kV/pHy58uDxtJiYbuYgj6q0p2erQf9TSeJ1uVc60BCKITQJO/IoiKdqDKFiQt/vvw6BQfzWc1iNBin2q1btUyhtiKyLxCJpjQB1tFE3X/GpfdKs5H1sKM7FeaY5127O6ml2J1VjwqdZsd+vQgN5NoMYRFBGuEdrC/k7Ib74a/LbEiewlUD5wd7Pl7x0vJkJUS770kAZbfnOW8rs3JcY3ELZeNNpdv9TpJe25DGd8cU9nUH3n/2iiZJIMAmNp3DwNP2z58DxsL71I=
+    - RUST_BACKTRACE=1
+    - PATH=$PATH:$HOME/.cargo/bin
 os:
   - linux
   - osx
 language: rust
 rust:
   - stable
-  - nightly
+  - nightly-2016-12-19
 sudo: false
 branches:
   only:
     - master
 cache:
   cargo: true
-  directories:
-    - $HOME/elfutils
+before_script:
+  - (which cargo-install-update && cargo install-update cargo-update) || cargo install cargo-update
+  - (which cargo-prune && cargo install-update cargo-prune) || cargo install cargo-prune
+  - if [ "${TRAVIS_RUST_VERSION}" = stable ]; then
+      (which rustfmt && cargo install-update rustfmt) || cargo install rustfmt;
+    elif [ "${TRAVIS_OS_NAME}" = linux ]; then
+      clippy_vers=0.0.104;
+      if ! cargo clippy --version | grep -q $clippy_vers; then
+        cargo install clippy --vers=$clippy_vers --force;
+      fi
+    fi
 script:
-  - curl -sSL https://github.com/maidsafe/QA/raw/master/Bash%20Scripts/Travis/build_and_run_tests.sh | bash
+  - if [ "${TRAVIS_RUST_VERSION}" = stable ]; then
+      (
+        set -x;
+        cargo fmt -- --write-mode=diff &&
+        cargo test --release --verbose
+      );
+    elif [ "${TRAVIS_OS_NAME}" = linux ]; then
+      (
+        set -x;
+        cargo clippy && cargo clippy --profile test
+      );
+    fi
 before_cache:
-  - curl -sSLO https://github.com/maidsafe/QA/raw/master/Bash%20Scripts/Travis/install_elfutils.sh
-  - . install_elfutils.sh
-after_success:
-  - curl -sSL https://github.com/maidsafe/QA/raw/master/Bash%20Scripts/Travis/after_success.sh | bash
+ - cargo prune
