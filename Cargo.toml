@@ -1,8 +1,8 @@
 [package]
 authors = ["MaidSafe Developers <dev@maidsafe.net>"]
 description = "Create, read and write JSON-encoded config files."
-documentation = "http://docs.maidsafe.net/config_file_handler/latest"
-homepage = "http://maidsafe.net"
+documentation = "https://docs.rs/config_file_handler"
+homepage = "https://maidsafe.net"
 license = "GPL-3.0"
 name = "config_file_handler"
 readme = "README.md"
@@ -10,7 +10,6 @@ repository = "https://github.com/maidsafe/config_file_handler"
 version = "0.4.0"
 
 [dependencies]
-clippy = {version = "~0.0.80", optional = true}
 fs2 = "0.2.5"
 quick-error = "1.1.0"
 rustc-serialize = "0.3.19"
