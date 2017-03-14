@@ -1,5 +1,9 @@
 # Config File Handler - Change Log
 
+## [0.5.0]
+- Cleaned up and improved CI scripts and README.md.
+- Renamed some public error variants.
+
 ## [0.4.0]
 - Modify file search paths for various paltforms. The path returned would either be the potential path where files can be read from or created, or will contain the default file already created by this crate, depending on function invoked.
 
