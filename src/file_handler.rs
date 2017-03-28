@@ -103,7 +103,10 @@ impl<T> FileHandler<T> {
 
         let mut path = system_cache_dir()?;
         path.push(name);
-        match OpenOptions::new().read(true).write(assert_writable).open(&path) {
+        match OpenOptions::new()
+                  .read(true)
+                  .write(assert_writable)
+                  .open(&path) {
             Ok(_) => {
                 Ok(FileHandler {
                        path: path,
@@ -151,7 +154,9 @@ impl<T> FileHandler<T>
         let contents = to_string_pretty(&T::default())?.into_bytes();
         let name = name.as_ref();
 
-        let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
+        let _guard = global_mutex::get_mutex()
+            .lock()
+            .expect("Could not lock mutex");
 
         if let Ok(mut path) = current_bin_dir() {
             path.push(name);
@@ -231,7 +236,9 @@ impl<T> FileHandler<T>
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = to_string_pretty(contents)?.into_bytes();
 
-        let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
+        let _guard = global_mutex::get_mutex()
+            .lock()
+            .expect("Could not lock mutex");
 
         let mut file = OpenOptions::new().write(true)
             .create(true)
@@ -313,14 +320,16 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory"))?
         .to_path_buf();
 
-    if !bundle_dir.to_str()
+    if !bundle_dir
+            .to_str()
             .ok_or(io::Error::new(io::ErrorKind::Other, "Path is not unicode"))?
             .ends_with(".app/Contents/MacOS") {
         return Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
                                             "Not inside an Application Bundle")));
     }
 
-    bundle_dir = bundle_dir.parent()
+    bundle_dir = bundle_dir
+        .parent()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory"))?
         .to_path_buf();
     bundle_dir.push("Resources");
@@ -431,7 +440,9 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 pub fn exe_file_stem() -> Result<OsString, Error> {
     let exe_path = env::current_exe()?;
     let file_stem = exe_path.file_stem();
-    Ok(file_stem.ok_or_else(|| not_found_error(&exe_path))?.to_os_string())
+    Ok(file_stem
+           .ok_or_else(|| not_found_error(&exe_path))?
+           .to_os_string())
 }
 
 /// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is
@@ -506,10 +517,14 @@ mod test {
         let file_handler = FileHandler::new("test1.json", true).expect("failed accessing file");
 
         let write_value0 = vec![1, 2, 3];
-        file_handler.write_file(&write_value0).expect("failed writing file");
+        file_handler
+            .write_file(&write_value0)
+            .expect("failed writing file");
 
         let write_value1 = vec![4, 5, 6];
-        file_handler.write_file(&write_value1).expect("failed writing file");
+        file_handler
+            .write_file(&write_value1)
+            .expect("failed writing file");
 
         let read_value = file_handler.read_file().expect("failed reading file");
         assert_eq!(read_value, write_value1);
@@ -539,7 +554,9 @@ mod test {
 
                     let file_handler =
                         FileHandler::new(FILE_NAME, true).expect("failed accessing file");
-                    file_handler.write_file(&data).expect("failed writing file");
+                    file_handler
+                        .write_file(&data)
+                        .expect("failed writing file");
                 })
             })
             .collect::<Vec<_>>();
