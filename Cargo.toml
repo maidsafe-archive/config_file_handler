@@ -12,4 +12,5 @@ version = "0.5.0"
 [dependencies]
 fs2 = "0.2.5"
 quick-error = "1.1.0"
-rustc-serialize = "0.3.19"
+serde = "~0.9.11"
+serde_json = "~0.9.9"

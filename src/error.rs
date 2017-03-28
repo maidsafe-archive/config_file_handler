@@ -15,40 +15,30 @@
 // Please review the Licences for the specific language governing permissions and limitations
 // relating to use of the SAFE Network Software.
 
+use serde_json::Error as JsonError;
+use std::env::VarError;
+use std::io::Error as IoError;
+
 quick_error! {
     /// Error types.
     #[derive(Debug)]
     pub enum Error {
         /// Wrapper for a `::std::env::VarError`
-        Env(err: ::std::env::VarError) {
+        Env(err: VarError) {
             description("Environment error")
             display("Environment error: {}", err)
             cause(err)
             from()
         }
         /// Wrapper for a `::std::io::Error`
-        Io(err: ::std::io::Error) {
+        Io(err: IoError) {
             description("IO error")
             display("IO error: {}", err)
             cause(err)
             from()
         }
-        /// Wrapper for a `::rustc_serialize::json::DecoderError`
-        JsonDecoder(err: ::rustc_serialize::json::DecoderError) {
-            description("Json decoder error")
-            display("Json decoder error: {}", err)
-            cause(err)
-            from()
-        }
-        /// Wrapper for a `::rustc_serialize::json::EncoderError`
-        JsonEncoder(err: ::rustc_serialize::json::EncoderError) {
-            description("Json encoder error")
-            display("Json encoder error: {}", err)
-            cause(err)
-            from()
-        }
-        /// Wrapper for a `rustc_serialize::json::ParserError`
-        JsonParser(err: ::rustc_serialize::json::ParserError) {
+        /// Wrapper for a `::serde_json::Error`
+        JsonParser(err: JsonError) {
             description("Json parse error")
             display("Json parse error: {}", err)
             cause(err)

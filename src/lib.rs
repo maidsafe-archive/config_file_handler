@@ -39,7 +39,8 @@
          missing_debug_implementations, variant_size_differences)]
 
 extern crate fs2;
-extern crate rustc_serialize;
+extern crate serde;
+extern crate serde_json;
 
 #[macro_use]
 extern crate quick_error;

@@ -18,8 +18,8 @@
 use error::Error;
 use fs2::FileExt;
 use global_mutex;
-use rustc_serialize::{Decodable, Encodable};
-use rustc_serialize::json::{self, Decoder, Json};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_reader, to_string_pretty};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
@@ -121,7 +121,7 @@ impl<T> FileHandler<T> {
 }
 
 impl<T> FileHandler<T>
-    where T: Default + Encodable
+    where T: Default + Serialize
 {
     /// Constructor taking the required file name (not the full path)
     /// The config file will be initialised to a default if it does not exist.
@@ -148,7 +148,7 @@ impl<T> FileHandler<T>
             return Ok(fh);
         }
 
-        let contents = format!("{}", json::as_pretty_json(&T::default())).into_bytes();
+        let contents = to_string_pretty(&T::default())?.into_bytes();
         let name = name.as_ref();
 
         let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
@@ -213,23 +213,23 @@ impl<T> FileHandler<T>
 }
 
 impl<T> FileHandler<T>
-    where T: Decodable
+    where T: Deserialize
 {
     /// Read the contents of the file and decode it as JSON.
+    #[cfg_attr(feature="cargo-clippy", allow(redundant_closure))] // because of lifetimes
     pub fn read_file(&self) -> Result<T, Error> {
         let mut file = File::open(&self.path)?;
-        let json = shared_lock(&mut file, |file| Json::from_reader(file))?;
-        let contents = T::decode(&mut Decoder::new(json))?;
+        let contents = shared_lock(&mut file, |file| from_reader(file))?;
         Ok(contents)
     }
 }
 
 impl<T> FileHandler<T>
-    where T: Encodable
+    where T: Serialize
 {
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
-        let contents = format!("{}", json::as_pretty_json(contents)).into_bytes();
+        let contents = to_string_pretty(contents)?.into_bytes();
 
         let _guard = global_mutex::get_mutex().lock().expect("Could not lock mutex");
 
