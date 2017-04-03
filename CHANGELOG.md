@@ -1,5 +1,9 @@
 # Config File Handler - Change Log
 
+## [0.6.0]
+- Switch to serde insted of rustc-serialize
+- rustfmt 0.8.1 and clippy-0.0.120
+
 ## [0.5.0]
 - Cleaned up and improved CI scripts and README.md.
 - Renamed some public error variants.
