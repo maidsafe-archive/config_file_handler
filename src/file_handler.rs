@@ -18,7 +18,8 @@
 use error::Error;
 use fs2::FileExt;
 use global_mutex;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::{from_reader, to_string_pretty};
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -218,7 +219,7 @@ impl<T> FileHandler<T>
 }
 
 impl<T> FileHandler<T>
-    where T: Deserialize
+    where T: DeserializeOwned
 {
     /// Read the contents of the file and decode it as JSON.
     #[cfg_attr(feature="cargo-clippy", allow(redundant_closure))] // because of lifetimes
@@ -240,7 +241,8 @@ impl<T> FileHandler<T>
             .lock()
             .expect("Could not lock mutex");
 
-        let mut file = OpenOptions::new().write(true)
+        let mut file = OpenOptions::new()
+            .write(true)
             .create(true)
             .truncate(true)
             .open(&self.path)?;
@@ -314,8 +316,7 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 /// For OSX this is special directory. For others it's an error.
 #[cfg(target_os="macos")]
 pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
-    let mut bundle_dir = env::current_exe()
-        ?
+    let mut bundle_dir = env::current_exe()?
         .parent()
         .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory"))?
         .to_path_buf();
@@ -359,8 +360,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 #[cfg(all(unix, not(target_os="macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut home_dir =
-        try!(env::home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")));
+        env::home_dir()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     home_dir.push(".config");
 
     if home_dir.is_dir() {
@@ -377,8 +378,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 #[cfg(target_os="macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut app_dir =
-        try!(env::home_dir()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")));
+        env::home_dir()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     app_dir.push("Library/Application Support");
 
     if app_dir.is_dir() {
