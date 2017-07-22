@@ -10,7 +10,7 @@ repository = "https://github.com/maidsafe/config_file_handler"
 version = "0.7.0"
 
 [dependencies]
-fs2 = "0.2.5"
-quick-error = "1.1.0"
-serde = "~1.0.2"
-serde_json = "~1.0.1"
+fs2 = "~0.4.2"
+quick-error = "~1.2.0"
+serde = "~1.0.10"
+serde_json = "~1.0.2"

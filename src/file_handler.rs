@@ -305,9 +305,9 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
     exclusive_lock(file, |file| file.write_all(contents))
 }
 
-/// The full path to the directory containing the currently-running binary.  See also [an example
+/// The full path to the directory containing the currently-running binary. See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf)`.
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
     match env::current_exe()?.parent() {
         Some(path) => Ok(path.to_path_buf()),
@@ -364,7 +364,7 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let path = env::var("APPDATA")?;
@@ -382,7 +382,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(all(unix, not(target_os = "macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut home_dir = env::home_dir().ok_or_else(|| {
@@ -402,7 +402,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(target_os = "macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let mut app_dir = env::home_dir().ok_or_else(|| {
@@ -422,7 +422,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(windows)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let path = env::var("ALLUSERSPROFILE")?;
@@ -440,7 +440,7 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(all(unix, not(target_os = "macos")))]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let sys_cache_dir = Path::new("/var/cache");
@@ -457,7 +457,7 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(target_os = "macos")]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let sys_cache_dir = Path::new("/Library/Application Support");
@@ -615,9 +615,10 @@ mod test {
     // Run as `cargo test -- --ignored --nocapture` to print the paths
     #[test]
     #[ignore]
+    #[cfg_attr(feature = "cargo-clippy", allow(ifs_same_cond))]
     fn print_paths() {
         let os = if cfg!(target_os = "macos") {
-            "Mac".to_string()
+            "macOS".to_string()
         } else if cfg!(target_os = "linux") {
             "Linux".to_string()
         } else if cfg!(unix) {
