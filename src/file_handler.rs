@@ -55,64 +55,67 @@ impl<T> FileHandler<T> {
     ///
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
-    pub fn open<S: AsRef<OsStr> + ?Sized>(name: &S,
-                                          assert_writable: bool)
-                                          -> Result<FileHandler<T>, Error> {
+    pub fn open<S: AsRef<OsStr> + ?Sized>(
+        name: &S,
+        assert_writable: bool,
+    ) -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
 
         if let Ok(mut path) = current_bin_dir() {
             path.push(name);
             if OpenOptions::new()
-                   .read(true)
-                   .write(assert_writable)
-                   .open(&path)
-                   .is_ok() {
+                .read(true)
+                .write(assert_writable)
+                .open(&path)
+                .is_ok()
+            {
                 return Ok(FileHandler {
-                              path: path,
-                              _ph: PhantomData,
-                          });
+                    path: path,
+                    _ph: PhantomData,
+                });
             }
         }
 
         if let Ok(mut path) = bundle_resource_dir() {
             path.push(name);
             if OpenOptions::new()
-                   .read(true)
-                   .write(assert_writable)
-                   .open(&path)
-                   .is_ok() {
+                .read(true)
+                .write(assert_writable)
+                .open(&path)
+                .is_ok()
+            {
                 return Ok(FileHandler {
-                              path: path,
-                              _ph: PhantomData,
-                          });
+                    path: path,
+                    _ph: PhantomData,
+                });
             }
         }
 
         if let Ok(mut path) = user_app_dir() {
             path.push(name);
             if OpenOptions::new()
-                   .read(true)
-                   .write(assert_writable)
-                   .open(&path)
-                   .is_ok() {
+                .read(true)
+                .write(assert_writable)
+                .open(&path)
+                .is_ok()
+            {
                 return Ok(FileHandler {
-                              path: path,
-                              _ph: PhantomData,
-                          });
+                    path: path,
+                    _ph: PhantomData,
+                });
             }
         }
 
         let mut path = system_cache_dir()?;
         path.push(name);
-        match OpenOptions::new()
-                  .read(true)
-                  .write(assert_writable)
-                  .open(&path) {
+        match OpenOptions::new().read(true).write(assert_writable).open(
+            &path,
+        ) {
             Ok(_) => {
                 Ok(FileHandler {
-                       path: path,
-                       _ph: PhantomData,
-                   })
+                    path: path,
+                    _ph: PhantomData,
+                })
             }
             Err(e) => Err(From::from(e)),
         }
@@ -125,7 +128,8 @@ impl<T> FileHandler<T> {
 }
 
 impl<T> FileHandler<T>
-    where T: Default + Serialize
+where
+    T: Default + Serialize,
 {
     /// Constructor taking the required file name (not the full path)
     /// The config file will be initialised to a default if it does not exist.
@@ -145,9 +149,10 @@ impl<T> FileHandler<T>
     ///
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
-    pub fn new<S: AsRef<OsStr> + ?Sized>(name: &S,
-                                         is_existing_file_writable: bool)
-                                         -> Result<FileHandler<T>, Error> {
+    pub fn new<S: AsRef<OsStr> + ?Sized>(
+        name: &S,
+        is_existing_file_writable: bool,
+    ) -> Result<FileHandler<T>, Error> {
         if let Ok(fh) = Self::open(name, is_existing_file_writable) {
             return Ok(fh);
         }
@@ -155,22 +160,23 @@ impl<T> FileHandler<T>
         let contents = to_string_pretty(&T::default())?.into_bytes();
         let name = name.as_ref();
 
-        let _guard = global_mutex::get_mutex()
-            .lock()
-            .expect("Could not lock mutex");
+        let _guard = global_mutex::get_mutex().lock().expect(
+            "Could not lock mutex",
+        );
 
         if let Ok(mut path) = current_bin_dir() {
             path.push(name);
             if let Ok(mut f) = OpenOptions::new()
-                   .write(true)
-                   .create(true)
-                   .truncate(true)
-                   .open(&path) {
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path)
+            {
                 write_with_lock(&mut f, &contents)?;
                 return Ok(FileHandler {
-                              path: path,
-                              _ph: PhantomData,
-                          });
+                    path: path,
+                    _ph: PhantomData,
+                });
             }
         }
 
@@ -183,15 +189,16 @@ impl<T> FileHandler<T>
             if !avoid {
                 path.push(name);
                 if let Ok(mut f) = OpenOptions::new()
-                       .write(true)
-                       .create(true)
-                       .truncate(true)
-                       .open(&path) {
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(&path)
+                {
                     write_with_lock(&mut f, &contents)?;
                     return Ok(FileHandler {
-                                  path: path,
-                                  _ph: PhantomData,
-                              });
+                        path: path,
+                        _ph: PhantomData,
+                    });
                 }
             }
         }
@@ -202,16 +209,16 @@ impl<T> FileHandler<T>
         }
         path.push(name);
         match OpenOptions::new()
-                  .write(true)
-                  .create(true)
-                  .truncate(true)
-                  .open(&path) {
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&path) {
             Ok(mut f) => {
                 write_with_lock(&mut f, &contents)?;
                 Ok(FileHandler {
-                       path: path,
-                       _ph: PhantomData,
-                   })
+                    path: path,
+                    _ph: PhantomData,
+                })
             }
             Err(e) => Err(From::from(e)),
         }
@@ -219,10 +226,11 @@ impl<T> FileHandler<T>
 }
 
 impl<T> FileHandler<T>
-    where T: DeserializeOwned
+where
+    T: DeserializeOwned,
 {
     /// Read the contents of the file and decode it as JSON.
-    #[cfg_attr(feature="cargo-clippy", allow(redundant_closure))] // because of lifetimes
+    #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))] // because of lifetimes
     pub fn read_file(&self) -> Result<T, Error> {
         let mut file = File::open(&self.path)?;
         let contents = shared_lock(&mut file, |file| from_reader(file))?;
@@ -231,15 +239,16 @@ impl<T> FileHandler<T>
 }
 
 impl<T> FileHandler<T>
-    where T: Serialize
+where
+    T: Serialize,
 {
     /// Write `contents` to the file as JSON.
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = to_string_pretty(contents)?.into_bytes();
 
-        let _guard = global_mutex::get_mutex()
-            .lock()
-            .expect("Could not lock mutex");
+        let _guard = global_mutex::get_mutex().lock().expect(
+            "Could not lock mutex",
+        );
 
         let mut file = OpenOptions::new()
             .write(true)
@@ -271,8 +280,9 @@ pub fn cleanup<S: AsRef<OsStr>>(name: &S) -> io::Result<()> {
 }
 
 fn exclusive_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>,
-          Error: From<E>
+where
+    F: FnOnce(&mut File) -> Result<R, E>,
+    Error: From<E>,
 {
     file.lock_exclusive()?;
     let result = f(file);
@@ -281,8 +291,9 @@ fn exclusive_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
 }
 
 fn shared_lock<F, R, E>(file: &mut File, f: F) -> Result<R, Error>
-    where F: FnOnce(&mut File) -> Result<R, E>,
-          Error: From<E>
+where
+    F: FnOnce(&mut File) -> Result<R, E>,
+    Error: From<E>,
 {
     file.lock_shared()?;
     let result = f(file);
@@ -294,44 +305,57 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
     exclusive_lock(file, |file| file.write_all(contents))
 }
 
-/// The full path to the directory containing the currently-running binary.  See also [an example
+/// The full path to the directory containing the currently-running binary. See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf)`.
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
     match env::current_exe()?.parent() {
         Some(path) => Ok(path.to_path_buf()),
-        None => Err(Error::Io(io::Error::new(io::ErrorKind::NotFound, "Current bin dir"))),
+        None => Err(Error::Io(
+            io::Error::new(io::ErrorKind::NotFound, "Current bin dir"),
+        )),
     }
 }
 
 /// The full path to the directory containing the resources to currently-running binary.
 /// For OSX this is special directory. For others it's an error.
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
-    Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                 "Bundle resource directory only applicable to MacOs")))
+    Err(Error::Io(io::Error::new(
+        io::ErrorKind::NotFound,
+        "Bundle resource directory only applicable to MacOs",
+    )))
 }
 
 /// The full path to the directory containing the resources to currently-running binary.
 /// For OSX this is special directory. For others it's an error.
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
     let mut bundle_dir = env::current_exe()?
         .parent()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory"))?
+        .ok_or(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Bundle resources directory",
+        ))?
         .to_path_buf();
 
     if !bundle_dir
-            .to_str()
-            .ok_or(io::Error::new(io::ErrorKind::Other, "Path is not unicode"))?
-            .ends_with(".app/Contents/MacOS") {
-        return Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                            "Not inside an Application Bundle")));
+        .to_str()
+        .ok_or(io::Error::new(io::ErrorKind::Other, "Path is not unicode"))?
+        .ends_with(".app/Contents/MacOS")
+    {
+        return Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Not inside an Application Bundle",
+        )));
     }
 
     bundle_dir = bundle_dir
         .parent()
-        .ok_or(io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory"))?
+        .ok_or(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Bundle resource directory",
+        ))?
         .to_path_buf();
     bundle_dir.push("Resources");
 
@@ -340,7 +364,7 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(windows)]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
     let path = env::var("APPDATA")?;
@@ -349,50 +373,56 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
     if app_dir.is_dir() {
         Ok(join_exe_file_stem(app_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global user app directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global user app directory not found.",
+        )))
     }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(all(unix, not(target_os="macos")))]
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
+#[cfg(all(unix, not(target_os = "macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut home_dir =
-        env::home_dir()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
+    let mut home_dir = env::home_dir().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")
+    })?;
     home_dir.push(".config");
 
     if home_dir.is_dir() {
         Ok(join_exe_file_stem(&home_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global user app directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global user app directory not found.",
+        )))
     }
 }
 
 /// The full path to an application support directory for the current user.  See also [an example
 /// config file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(target_os="macos")]
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
+#[cfg(target_os = "macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut app_dir =
-        env::home_dir()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
+    let mut app_dir = env::home_dir().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")
+    })?;
     app_dir.push("Library/Application Support");
 
     if app_dir.is_dir() {
         Ok(join_exe_file_stem(&app_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global user app directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global user app directory not found.",
+        )))
     }
 }
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
 #[cfg(windows)]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let path = env::var("ALLUSERSPROFILE")?;
@@ -401,38 +431,44 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
     if sys_cache_dir.is_dir() {
         Ok(join_exe_file_stem(sys_cache_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global system cache directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global system cache directory not found.",
+        )))
     }
 }
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(all(unix, not(target_os="macos")))]
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
+#[cfg(all(unix, not(target_os = "macos")))]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let sys_cache_dir = Path::new("/var/cache");
 
     if sys_cache_dir.is_dir() {
         Ok(join_exe_file_stem(sys_cache_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global system cache directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global system cache directory not found.",
+        )))
     }
 }
 
 /// The full path to a system cache directory available for all users. See also [an example config
 /// file flowchart]
-/// (https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf).
-#[cfg(target_os="macos")]
+/// `https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf`.
+#[cfg(target_os = "macos")]
 pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let sys_cache_dir = Path::new("/Library/Application Support");
 
     if sys_cache_dir.is_dir() {
         Ok(join_exe_file_stem(&sys_cache_dir)?)
     } else {
-        Err(Error::Io(io::Error::new(io::ErrorKind::NotFound,
-                                     "Global system cache directory not found.")))
+        Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Global system cache directory not found.",
+        )))
     }
 }
 
@@ -441,9 +477,11 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 pub fn exe_file_stem() -> Result<OsString, Error> {
     let exe_path = env::current_exe()?;
     let file_stem = exe_path.file_stem();
-    Ok(file_stem
-           .ok_or_else(|| not_found_error(&exe_path))?
-           .to_os_string())
+    Ok(
+        file_stem
+            .ok_or_else(|| not_found_error(&exe_path))?
+            .to_os_string(),
+    )
 }
 
 /// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is
@@ -470,8 +508,8 @@ pub struct ScopedUserAppDirRemover;
 impl ScopedUserAppDirRemover {
     fn remove_dir(&mut self) {
         let _ = user_app_dir().and_then(|user_app_dir| {
-                                            fs::remove_dir_all(user_app_dir).map_err(Error::Io)
-                                        });
+            fs::remove_dir_all(user_app_dir).map_err(Error::Io)
+        });
     }
 }
 
@@ -518,14 +556,14 @@ mod test {
         let file_handler = FileHandler::new("test1.json", true).expect("failed accessing file");
 
         let write_value0 = vec![1, 2, 3];
-        file_handler
-            .write_file(&write_value0)
-            .expect("failed writing file");
+        file_handler.write_file(&write_value0).expect(
+            "failed writing file",
+        );
 
         let write_value1 = vec![4, 5, 6];
-        file_handler
-            .write_file(&write_value1)
-            .expect("failed writing file");
+        file_handler.write_file(&write_value1).expect(
+            "failed writing file",
+        );
 
         let read_value = file_handler.read_file().expect("failed reading file");
         assert_eq!(read_value, write_value1);
@@ -555,9 +593,7 @@ mod test {
 
                     let file_handler =
                         FileHandler::new(FILE_NAME, true).expect("failed accessing file");
-                    file_handler
-                        .write_file(&data)
-                        .expect("failed writing file");
+                    file_handler.write_file(&data).expect("failed writing file");
                 })
             })
             .collect::<Vec<_>>();
@@ -579,9 +615,10 @@ mod test {
     // Run as `cargo test -- --ignored --nocapture` to print the paths
     #[test]
     #[ignore]
+    #[cfg_attr(feature = "cargo-clippy", allow(ifs_same_cond))]
     fn print_paths() {
         let os = if cfg!(target_os = "macos") {
-            "Mac".to_string()
+            "macOS".to_string()
         } else if cfg!(target_os = "linux") {
             "Linux".to_string()
         } else if cfg!(unix) {

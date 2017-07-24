@@ -29,7 +29,9 @@ pub fn get_mutex<'a>() -> &'a GlobalMutex {
     static ONCE: Once = ONCE_INIT;
 
     unsafe {
-        ONCE.call_once(|| { GLOBAL_MUTEX = Box::into_raw(Box::new(GlobalMutex::new(()))); });
+        ONCE.call_once(|| {
+            GLOBAL_MUTEX = Box::into_raw(Box::new(GlobalMutex::new(())));
+        });
 
         &*GLOBAL_MUTEX
     }
