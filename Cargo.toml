@@ -7,7 +7,7 @@ license = "GPL-3.0"
 name = "secure_serialisation"
 readme = "README.md"
 repository = "https://github.com/maidsafe/secure_serialisation"
-version = "0.3.0"
+version = "0.4.0"
 
 [dependencies]
 maidsafe_utilities = "~0.14.0"
