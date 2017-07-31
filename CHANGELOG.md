@@ -1,5 +1,8 @@
 # Config File Handler - Change Log
 
+## [0.8.1]
+- change inline style link to reference style link definitions
+
 ## [0.8.0]
 - Use rust 1.19 stable / 2017-07-20 nightly
 - rustfmt 0.9.0 and clippy-0.0.144
