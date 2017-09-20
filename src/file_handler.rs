@@ -27,6 +27,16 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref ADDITIONAL_SEARCH_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+}
+
+/// Set an additional search path. This, if set, will be tried before the other default ones.
+pub fn set_additional_search_path<P: AsRef<OsStr> + ?Sized>(path: &P) {
+    *unwrap!(ADDITIONAL_SEARCH_PATH.lock()) = Some(From::from(path));
+}
 
 /// Struct for reading and writing config files.
 ///
@@ -60,6 +70,22 @@ impl<T> FileHandler<T> {
         assert_writable: bool,
     ) -> Result<FileHandler<T>, Error> {
         let name = name.as_ref();
+
+        if let Some(mut path) = unwrap!(ADDITIONAL_SEARCH_PATH.lock()).clone() {
+            path.push(name);
+            if OpenOptions::new()
+                .read(true)
+                .write(assert_writable)
+                .open(&path)
+                .is_ok()
+            {
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            }
+
+        }
 
         if let Ok(mut path) = current_bin_dir() {
             path.push(name);
@@ -163,6 +189,22 @@ where
         let _guard = global_mutex::get_mutex().lock().expect(
             "Could not lock mutex",
         );
+
+        if let Some(mut path) = unwrap!(ADDITIONAL_SEARCH_PATH.lock()).clone() {
+            path.push(name);
+            if let Ok(mut f) = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path)
+            {
+                write_with_lock(&mut f, &contents)?;
+                return Ok(FileHandler {
+                    path: path,
+                    _ph: PhantomData,
+                });
+            }
+        }
 
         if let Ok(mut path) = current_bin_dir() {
             path.push(name);

@@ -1,5 +1,8 @@
 # Config File Handler - Change Log
 
+## [0.8.2]
+- Feature to specify additional search paths externally.
+
 ## [0.8.1]
 - change inline style link to reference style link definitions
 
