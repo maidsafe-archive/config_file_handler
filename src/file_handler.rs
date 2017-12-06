@@ -524,13 +524,16 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 /// The file name of the currently-running binary without any suffix or extension.  For example, if
 /// the binary is "C:\\Abc.exe" this function will return `Ok("Abc")`.
 pub fn exe_file_stem() -> Result<OsString, Error> {
-    let exe_path = env::current_exe()?;
-    let file_stem = exe_path.file_stem();
-    Ok(
-        file_stem
-            .ok_or_else(|| not_found_error(&exe_path))?
-            .to_os_string(),
-    )
+    if let Ok(exe_path) = env::current_exe() {
+        let file_stem = exe_path.file_stem();
+        Ok(
+            file_stem
+                .ok_or_else(|| not_found_error(&exe_path))?
+                .to_os_string(),
+        )
+    } else {
+        Ok(From::from("default"))
+    }
 }
 
 /// RAII object which removes the [`user_app_dir()`](fn.user_app_dir.html) when an instance is
