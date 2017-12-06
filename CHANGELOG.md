@@ -1,5 +1,8 @@
 # Config File Handler - Change Log
 
+## [0.8.3]
+- `exe_file_stem` falls back to a default value in case of error
+
 ## [0.8.2]
 - Feature to specify additional search paths externally.
 
