@@ -592,7 +592,7 @@ mod test {
             Ok(result) => result,
             Err(err) => panic!("failed accessing file with error {:?}", err),
         };
-        let test_value = 123456789u64;
+        let test_value = 123_456_789u64;
 
         let _ = file_handler.write_file(&test_value);
         let read_value = match file_handler.read_file() {
@@ -628,15 +628,15 @@ mod test {
         use std::thread;
 
         const NUM_THREADS: usize = 100;
-        const DATA_SIZE: usize = 10000;
-        const FILE_NAME: &'static str = "test2.json";
+        const DATA_SIZE: usize = 10_000;
+        const FILE_NAME: &str = "test2.json";
 
         let _cleaner = ScopedUserAppDirRemover;
         let barrier = Arc::new(Barrier::new(NUM_THREADS));
 
         let handles = (0..NUM_THREADS)
             .map(|i| {
-                let barrier = barrier.clone();
+                let barrier = Arc::clone(&barrier);
 
                 thread::spawn(move || {
                     let data = iter::repeat(i).take(DATA_SIZE).collect::<Vec<_>>();
