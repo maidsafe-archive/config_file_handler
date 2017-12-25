@@ -1,5 +1,9 @@
 # Config File Handler - Change Log
 
+## [0.9.0]
+- Use rust 1.22.1 stable / 2017-11-23 nightly
+- rustfmt 0.9.0 and clippy-0.0.174
+
 ## [0.8.3]
 - `exe_file_stem` falls back to a default value in case of error
 
