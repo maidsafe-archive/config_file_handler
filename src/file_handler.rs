@@ -376,17 +376,19 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
     let mut bundle_dir = env::current_exe()?
         .parent()
-        .ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Bundle resources directory",
-        ))?
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory")
+        })?
         .to_path_buf();
 
-    if !bundle_dir
+    let is_inside_bundle = bundle_dir
         .to_str()
-        .ok_or(io::Error::new(io::ErrorKind::Other, "Path is not unicode"))?
-        .ends_with(".app/Contents/MacOS")
-    {
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "Path is not unicode")
+        })?
+        .ends_with(".app/Contents/MacOS");
+
+    if !is_inside_bundle {
         return Err(Error::Io(io::Error::new(
             io::ErrorKind::NotFound,
             "Not inside an Application Bundle",
@@ -395,10 +397,9 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 
     bundle_dir = bundle_dir
         .parent()
-        .ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Bundle resource directory",
-        ))?
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory")
+        })?
         .to_path_buf();
     bundle_dir.push("Resources");
 
@@ -512,7 +513,7 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
     let sys_cache_dir = Path::new("/Library/Application Support");
 
     if sys_cache_dir.is_dir() {
-        Ok(join_exe_file_stem(&sys_cache_dir)?)
+        Ok(join_exe_file_stem(sys_cache_dir)?)
     } else {
         Err(Error::Io(io::Error::new(
             io::ErrorKind::NotFound,
