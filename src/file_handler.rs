@@ -10,8 +10,8 @@
 use error::Error;
 use fs2::FileExt;
 use global_mutex;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::{from_reader, to_string_pretty};
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -76,7 +76,6 @@ impl<T> FileHandler<T> {
                     _ph: PhantomData,
                 });
             }
-
         }
 
         if let Ok(mut path) = current_bin_dir() {
@@ -126,15 +125,15 @@ impl<T> FileHandler<T> {
 
         let mut path = system_cache_dir()?;
         path.push(name);
-        match OpenOptions::new().read(true).write(assert_writable).open(
-            &path,
-        ) {
-            Ok(_) => {
-                Ok(FileHandler {
-                    path: path,
-                    _ph: PhantomData,
-                })
-            }
+        match OpenOptions::new()
+            .read(true)
+            .write(assert_writable)
+            .open(&path)
+        {
+            Ok(_) => Ok(FileHandler {
+                path: path,
+                _ph: PhantomData,
+            }),
             Err(e) => Err(From::from(e)),
         }
     }
@@ -178,9 +177,9 @@ where
         let contents = to_string_pretty(&T::default())?.into_bytes();
         let name = name.as_ref();
 
-        let _guard = global_mutex::get_mutex().lock().expect(
-            "Could not lock mutex",
-        );
+        let _guard = global_mutex::get_mutex()
+            .lock()
+            .expect("Could not lock mutex");
 
         if let Some(mut path) = unwrap!(ADDITIONAL_SEARCH_PATH.lock()).clone() {
             path.push(name);
@@ -246,7 +245,8 @@ where
             .write(true)
             .create(true)
             .truncate(true)
-            .open(&path) {
+            .open(&path)
+        {
             Ok(mut f) => {
                 write_with_lock(&mut f, &contents)?;
                 Ok(FileHandler {
@@ -280,9 +280,9 @@ where
     pub fn write_file(&self, contents: &T) -> Result<(), Error> {
         let contents = to_string_pretty(contents)?.into_bytes();
 
-        let _guard = global_mutex::get_mutex().lock().expect(
-            "Could not lock mutex",
-        );
+        let _guard = global_mutex::get_mutex()
+            .lock()
+            .expect("Could not lock mutex");
 
         let mut file = OpenOptions::new()
             .write(true)
@@ -346,9 +346,10 @@ fn write_with_lock(file: &mut File, contents: &[u8]) -> Result<(), Error> {
 pub fn current_bin_dir() -> Result<PathBuf, Error> {
     match env::current_exe()?.parent() {
         Some(path) => Ok(path.to_path_buf()),
-        None => Err(Error::Io(
-            io::Error::new(io::ErrorKind::NotFound, "Current bin dir"),
-        )),
+        None => Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Current bin dir",
+        ))),
     }
 }
 
@@ -368,16 +369,12 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
     let mut bundle_dir = env::current_exe()?
         .parent()
-        .ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory")
-        })?
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Bundle resources directory"))?
         .to_path_buf();
 
     let is_inside_bundle = bundle_dir
         .to_str()
-        .ok_or_else(|| {
-            io::Error::new(io::ErrorKind::Other, "Path is not unicode")
-        })?
+        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Path is not unicode"))?
         .ends_with(".app/Contents/MacOS");
 
     if !is_inside_bundle {
@@ -389,9 +386,7 @@ pub fn bundle_resource_dir() -> Result<PathBuf, Error> {
 
     bundle_dir = bundle_dir
         .parent()
-        .ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory")
-        })?
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Bundle resource directory"))?
         .to_path_buf();
     bundle_dir.push("Resources");
 
@@ -423,9 +418,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// [1]: https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf
 #[cfg(all(unix, not(target_os = "macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut home_dir = env::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")
-    })?;
+    let mut home_dir = env::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     home_dir.push(".config");
 
     if home_dir.is_dir() {
@@ -444,9 +438,8 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// [1]: https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf
 #[cfg(target_os = "macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut app_dir = env::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "Home directory not found.")
-    })?;
+    let mut app_dir = env::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     app_dir.push("Library/Application Support");
 
     if app_dir.is_dir() {
@@ -519,11 +512,9 @@ pub fn system_cache_dir() -> Result<PathBuf, Error> {
 pub fn exe_file_stem() -> Result<OsString, Error> {
     if let Ok(exe_path) = env::current_exe() {
         let file_stem = exe_path.file_stem();
-        Ok(
-            file_stem
-                .ok_or_else(|| not_found_error(&exe_path))?
-                .to_os_string(),
-        )
+        Ok(file_stem
+            .ok_or_else(|| not_found_error(&exe_path))?
+            .to_os_string())
     } else {
         Ok(From::from("default"))
     }
@@ -552,9 +543,8 @@ pub struct ScopedUserAppDirRemover;
 
 impl ScopedUserAppDirRemover {
     fn remove_dir(&mut self) {
-        let _ = user_app_dir().and_then(|user_app_dir| {
-            fs::remove_dir_all(user_app_dir).map_err(Error::Io)
-        });
+        let _ = user_app_dir()
+            .and_then(|user_app_dir| fs::remove_dir_all(user_app_dir).map_err(Error::Io));
     }
 }
 
@@ -601,14 +591,14 @@ mod test {
         let file_handler = FileHandler::new("test1.json", true).expect("failed accessing file");
 
         let write_value0 = vec![1, 2, 3];
-        file_handler.write_file(&write_value0).expect(
-            "failed writing file",
-        );
+        file_handler
+            .write_file(&write_value0)
+            .expect("failed writing file");
 
         let write_value1 = vec![4, 5, 6];
-        file_handler.write_file(&write_value1).expect(
-            "failed writing file",
-        );
+        file_handler
+            .write_file(&write_value1)
+            .expect("failed writing file");
 
         let read_value = file_handler.read_file().expect("failed reading file");
         assert_eq!(read_value, write_value1);
