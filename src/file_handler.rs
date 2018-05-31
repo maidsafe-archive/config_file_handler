@@ -72,7 +72,7 @@ impl<T> FileHandler<T> {
                 .is_ok()
             {
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -87,7 +87,7 @@ impl<T> FileHandler<T> {
                 .is_ok()
             {
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -102,7 +102,7 @@ impl<T> FileHandler<T> {
                 .is_ok()
             {
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -117,7 +117,7 @@ impl<T> FileHandler<T> {
                 .is_ok()
             {
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -131,7 +131,7 @@ impl<T> FileHandler<T> {
             .open(&path)
         {
             Ok(_) => Ok(FileHandler {
-                path: path,
+                path,
                 _ph: PhantomData,
             }),
             Err(e) => Err(From::from(e)),
@@ -191,7 +191,7 @@ where
             {
                 write_with_lock(&mut f, &contents)?;
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -207,7 +207,7 @@ where
             {
                 write_with_lock(&mut f, &contents)?;
                 return Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 });
             }
@@ -229,7 +229,7 @@ where
                 {
                     write_with_lock(&mut f, &contents)?;
                     return Ok(FileHandler {
-                        path: path,
+                        path,
                         _ph: PhantomData,
                     });
                 }
@@ -250,7 +250,7 @@ where
             Ok(mut f) => {
                 write_with_lock(&mut f, &contents)?;
                 Ok(FileHandler {
-                    path: path,
+                    path,
                     _ph: PhantomData,
                 })
             }
