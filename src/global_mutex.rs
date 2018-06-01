@@ -7,7 +7,7 @@
 // specific language governing permissions and limitations relating to use of the SAFE Network
 // Software.
 
-use std::sync::{Mutex, ONCE_INIT, Once};
+use std::sync::{Mutex, Once, ONCE_INIT};
 
 pub type GlobalMutex = Mutex<()>;
 
