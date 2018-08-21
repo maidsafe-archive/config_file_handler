@@ -630,8 +630,7 @@ mod test {
                         FileHandler::new(FILE_NAME, true).expect("failed accessing file");
                     file_handler.write_file(&data).expect("failed writing file");
                 })
-            })
-            .collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
 
         for handle in handles {
             handle.join().unwrap();
