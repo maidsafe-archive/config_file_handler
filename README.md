@@ -1,7 +1,5 @@
 # config_file_handler
 
-**Maintainer:** Spandan Sharma (spandan.sharma@maidsafe.net)
-
 |Crate|Documentation|Linux/OS X|Windows|Issues|
 |:---:|:-----------:|:--------:|:-----:|:----:|
 |[![](http://meritbadge.herokuapp.com/config_file_handler)](https://crates.io/crates/config_file_handler)|[![Documentation](https://docs.rs/config_file_handler/badge.svg)](https://docs.rs/config_file_handler)|[![Build Status](https://travis-ci.org/maidsafe/config_file_handler.svg?branch=master)](https://travis-ci.org/maidsafe/config_file_handler)|[![Build status](https://ci.appveyor.com/api/projects/status/22gb4w9fhvhv3hn4/branch/master?svg=true)](https://ci.appveyor.com/project/MaidSafe-QA/config-file-handler/branch/master)|[![Stories in Ready](https://badge.waffle.io/maidsafe/config_file_handler.png?label=ready&title=Ready)](https://waffle.io/maidsafe/config_file_handler)|

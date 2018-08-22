@@ -633,7 +633,7 @@ mod test {
             }).collect::<Vec<_>>();
 
         for handle in handles {
-            handle.join().unwrap();
+            unwrap!(handle.join());
         }
 
         let file_handler = FileHandler::new(FILE_NAME, true).expect("failed accessing file");
