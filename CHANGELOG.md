@@ -1,5 +1,10 @@
 # Config File Handler - Change Log
 
+## [0.11.0]
+- Use rust 1.28.0 stable / 2018-07-07 nightly
+- Use unwrap 1.2.1
+- rustfmt 0.99.2 and clippy-0.0.212
+
 ## [0.10.0]
 - Use rust 1.24.0 stable / 2018-02-05 nightly
 - rustfmt 0.9.0 and clippy-0.0.186
