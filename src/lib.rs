@@ -33,8 +33,6 @@
     non_shorthand_field_patterns,
     overflowing_literals,
     plugin_as_library,
-    private_no_mangle_fns,
-    private_no_mangle_statics,
     stable_features,
     unconditional_recursion,
     unknown_lints,
@@ -62,10 +60,6 @@
     variant_size_differences
 )]
 
-extern crate fs2;
-extern crate serde;
-extern crate serde_json;
-
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -77,8 +71,8 @@ mod error;
 mod file_handler;
 mod global_mutex;
 
-pub use error::Error;
-pub use file_handler::{
+pub use crate::error::Error;
+pub use crate::file_handler::{
     cleanup, current_bin_dir, exe_file_stem, set_additional_search_path, system_cache_dir,
     user_app_dir, FileHandler, ScopedUserAppDirRemover,
 };
