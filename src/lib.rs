@@ -60,10 +60,6 @@
     variant_size_differences
 )]
 
-extern crate fs2;
-extern crate serde;
-extern crate serde_json;
-
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

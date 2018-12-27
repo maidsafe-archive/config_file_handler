@@ -8,6 +8,7 @@ name = "config_file_handler"
 readme = "README.md"
 repository = "https://github.com/maidsafe/config_file_handler"
 version = "0.11.0"
+edition = "2018"
 
 [dependencies]
 fs2 = "~0.4.2"
