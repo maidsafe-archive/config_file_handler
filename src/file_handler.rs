@@ -7,9 +7,9 @@
 // specific language governing permissions and limitations relating to use of the SAFE Network
 // Software.
 
-use error::Error;
+use crate::error::Error;
+use crate::global_mutex;
 use fs2::FileExt;
-use global_mutex;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::{from_reader, to_string_pretty};
