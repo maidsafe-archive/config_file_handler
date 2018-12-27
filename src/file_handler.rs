@@ -166,6 +166,7 @@ where
     ///
     /// See [Thread- and Process-Safety](#thread--and-process-safety) for notes on thread- and
     /// process-safety.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<S: AsRef<OsStr> + ?Sized>(
         name: &S,
         is_existing_file_writable: bool,
@@ -264,7 +265,7 @@ where
     T: DeserializeOwned,
 {
     /// Read the contents of the file and decode it as JSON.
-    #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))] // because of lifetimes
+    #[allow(clippy::redundant_closure)] // because of lifetimes
     pub fn read_file(&self) -> Result<T, Error> {
         let mut file = File::open(&self.path)?;
         let contents = shared_lock(&mut file, |file| from_reader(file))?;
@@ -418,7 +419,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// [1]: https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf
 #[cfg(all(unix, not(target_os = "macos")))]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut home_dir = env::home_dir()
+    let mut home_dir = dirs::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     home_dir.push(".config");
 
@@ -438,7 +439,7 @@ pub fn user_app_dir() -> Result<PathBuf, Error> {
 /// [1]: https://github.com/maidsafe/crust/blob/master/docs/vault_config_file_flowchart.pdf
 #[cfg(target_os = "macos")]
 pub fn user_app_dir() -> Result<PathBuf, Error> {
-    let mut app_dir = env::home_dir()
+    let mut app_dir = dirs::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found."))?;
     app_dir.push("Library/Application Support");
 
@@ -630,7 +631,8 @@ mod test {
                         FileHandler::new(FILE_NAME, true).expect("failed accessing file");
                     file_handler.write_file(&data).expect("failed writing file");
                 })
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
 
         for handle in handles {
             unwrap!(handle.join());
@@ -649,7 +651,7 @@ mod test {
     // Run as `cargo test -- --ignored --nocapture` to print the paths
     #[test]
     #[ignore]
-    #[cfg_attr(feature = "cargo-clippy", allow(ifs_same_cond))]
+    #[allow(clippy::ifs_same_cond)]
     fn print_paths() {
         let os = if cfg!(target_os = "macos") {
             "macOS".to_string()
