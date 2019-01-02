@@ -2,6 +2,7 @@ env:
   global:
     - PATH=$PATH:$HOME/.cargo/bin
     - RUST_BACKTRACE=1
+    - TARGET=x86_64-unknown-linux-musl
 os:
   - linux
   - osx
@@ -17,12 +18,13 @@ cache:
 before_script:
   - curl -sSL https://github.com/maidsafe/QA/raw/master/travis/cargo_install.sh > cargo_install.sh
   - bash cargo_install.sh cargo-prune;
+  - rustup target add $TARGET
   - rustup component add rustfmt clippy
 script:
   - set -x;
     cargo fmt -- --check &&
-    cargo test --release --verbose &&
-    cargo clippy &&
-    cargo clippy --profile test
+    cargo test --target $TARGET --release --verbose &&
+    cargo clippy --target $TARGET &&
+    cargo clippy --target $TARGET --profile test
 before_cache:
  - cargo prune
