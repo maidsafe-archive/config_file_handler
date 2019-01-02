@@ -23,6 +23,7 @@ before_script:
 script:
   - set -x;
     cargo fmt -- --check &&
+    cargo check --verbose --all-targets --target $TARGET &&
     cargo clippy --verbose --all-targets --target $TARGET &&
     cargo test --verbose --release --target $TARGET
 before_cache:
