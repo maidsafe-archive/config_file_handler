@@ -2,10 +2,11 @@ env:
   global:
     - PATH=$PATH:$HOME/.cargo/bin
     - RUST_BACKTRACE=1
-    - TARGET=x86_64-unknown-linux-musl
-os:
-  - linux
-  - osx
+matrix:
+  include:
+    - os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: osx
 language: rust
 rust:
   - stable
@@ -18,13 +19,18 @@ cache:
 before_script:
   - curl -sSL https://github.com/maidsafe/QA/raw/master/travis/cargo_install.sh > cargo_install.sh
   - bash cargo_install.sh cargo-prune;
-  - rustup target add $TARGET
+  - if [[ -n "$TARGET" ]]; then
+      rustup target add $TARGET;
+    fi
   - rustup component add rustfmt clippy
 script:
   - set -x;
+    if [[ -n "$TARGET" ]]; then
+      TARGET_FLAG="--target $TARGET";
+    fi &&
     cargo fmt -- --check &&
-    cargo check --verbose --all-targets --target $TARGET &&
-    cargo clippy --verbose --all-targets --target $TARGET &&
-    cargo test --verbose --release --target $TARGET
+    cargo check --verbose --all-targets $TARGET_FLAG &&
+    cargo clippy --verbose --all-targets $TARGET_FLAG &&
+    cargo test --verbose --release $TARGET_FLAG
 before_cache:
  - cargo prune
